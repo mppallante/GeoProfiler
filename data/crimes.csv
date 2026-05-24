@@ -1,0 +1,6 @@
+id,tipo_crime,data,hora,latitude,longitude,cidade,bairro,modus_operandi,observacoes
+1,Furto,2026-01-05,20:15,-23.550520,-46.633308,Sao Paulo,Centro,Subtracao sem violencia,Registro inicial de exemplo
+2,Roubo,2026-01-12,22:40,-23.561684,-46.625378,Sao Paulo,Liberdade,Abordagem em via publica,Registro inicial de exemplo
+3,Furto,2026-01-20,18:05,-23.548943,-46.638818,Sao Paulo,Republica,Subtracao de objeto pessoal,Registro inicial de exemplo
+4,Agressao,2026-02-02,01:30,-23.555771,-46.639557,Sao Paulo,Bela Vista,Conflito interpessoal,Registro inicial de exemplo
+5,Roubo,2026-02-11,23:10,-23.567386,-46.648635,Sao Paulo,Paraiso,Abordagem proxima ao transporte,Registro inicial de exemplo
