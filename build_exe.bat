@@ -3,6 +3,20 @@ setlocal
 
 cd /d "%~dp0"
 
+set "PYTHON_CMD="
+
+where py >nul 2>nul
+if not errorlevel 1 (
+    set "PYTHON_CMD=py"
+)
+
+if "%PYTHON_CMD%"=="" (
+    where python >nul 2>nul
+    if not errorlevel 1 (
+        set "PYTHON_CMD=python"
+    )
+)
+
 echo ========================================
 echo GeoProfiler - Windows EXE Builder
 echo ========================================
@@ -10,10 +24,16 @@ echo.
 
 if not exist ".venv\Scripts\python.exe" (
     echo Criando ambiente virtual em .venv...
-    py -m venv .venv
+    if "%PYTHON_CMD%"=="" (
+        echo ERRO: Python nao encontrado.
+        echo Instale o Python 3 e marque a opcao Add Python to PATH.
+        pause
+        exit /b 1
+    )
+    %PYTHON_CMD% -m venv .venv
     if errorlevel 1 (
         echo ERRO: Nao foi possivel criar o ambiente virtual.
-        echo Instale o Python e garanta que o comando py esteja disponivel.
+        echo Instale o Python e garanta que ele esteja disponivel no PATH.
         pause
         exit /b 1
     )
