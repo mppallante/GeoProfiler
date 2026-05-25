@@ -75,11 +75,19 @@ def configure_environment(runtime_root: Path) -> None:
 
 def run_streamlit(app_path: Path, port: int) -> None:
     """Run Streamlit in-process to avoid executable recursion."""
+    import streamlit.config as config
     from streamlit.web import bootstrap
+
+    config.set_option("global.developmentMode", False)
+    config.set_option("server.headless", True)
+    config.set_option("server.port", port)
+    config.set_option("server.fileWatcherType", "none")
+    config.set_option("browser.gatherUsageStats", False)
 
     flag_options = {
         "server.port": port,
         "server.headless": True,
+        "server.fileWatcherType": "none",
         "browser.gatherUsageStats": False,
         "global.developmentMode": False,
     }
@@ -112,6 +120,8 @@ def wait_for_server(host: str, port: int, timeout_seconds: int = 25) -> bool:
 def open_browser_when_ready(host: str, port: int, url: str) -> None:
     """Open the browser once when the local Streamlit server is ready."""
     if wait_for_server(host, port):
+        if os.environ.get("GEOPROFILER_NO_BROWSER") == "1":
+            return
         webbrowser.open_new(url)
 
 
