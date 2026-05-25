@@ -60,6 +60,7 @@ echo Gerando GeoProfiler.exe...
     --noconfirm ^
     --clean ^
     --onefile ^
+    --noconsole ^
     --name GeoProfiler ^
     --add-data "app.py;." ^
     --add-data "requirements.txt;." ^

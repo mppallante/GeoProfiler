@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 import shutil
 import socket
-import subprocess
 import sys
+import threading
 import time
 import webbrowser
 from pathlib import Path
@@ -24,26 +24,16 @@ def main() -> None:
 
     port = find_available_port(DEFAULT_PORT)
     app_path = project_root / APP_FILE
-    env = build_environment(runtime_root)
-    command = build_streamlit_command(app_path, port)
-
-    process = subprocess.Popen(
-        command,
-        cwd=str(project_root),
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        creationflags=get_subprocess_flags(),
-    )
+    configure_environment(runtime_root)
 
     url = f"http://localhost:{port}"
-    wait_for_server("127.0.0.1", port)
-    webbrowser.open(url)
+    threading.Thread(
+        target=open_browser_when_ready,
+        args=("127.0.0.1", port, url),
+        daemon=True,
+    ).start()
 
-    try:
-        process.wait()
-    except KeyboardInterrupt:
-        process.terminate()
+    run_streamlit(app_path, port)
 
 
 def get_project_root() -> Path:
@@ -75,31 +65,25 @@ def ensure_runtime_data(project_root: Path, runtime_root: Path) -> None:
         shutil.copy2(source_csv, runtime_csv)
 
 
-def build_environment(runtime_root: Path) -> dict[str, str]:
-    """Build environment variables used by the Streamlit process."""
-    env = os.environ.copy()
-    env["GEOPROFILER_RUNTIME_DIR"] = str(runtime_root)
-    env["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
-    env["STREAMLIT_SERVER_HEADLESS"] = "true"
-    env["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
-    return env
+def configure_environment(runtime_root: Path) -> None:
+    """Configure environment variables used by Streamlit and the app."""
+    os.environ["GEOPROFILER_RUNTIME_DIR"] = str(runtime_root)
+    os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+    os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+    os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
 
 
-def build_streamlit_command(app_path: Path, port: int) -> list[str]:
-    """Build the command that starts Streamlit."""
-    return [
-        sys.executable,
-        "-m",
-        "streamlit",
-        "run",
-        str(app_path),
-        "--server.port",
-        str(port),
-        "--server.headless",
-        "true",
-        "--browser.gatherUsageStats",
-        "false",
-    ]
+def run_streamlit(app_path: Path, port: int) -> None:
+    """Run Streamlit in-process to avoid executable recursion."""
+    from streamlit.web import bootstrap
+
+    flag_options = {
+        "server.port": port,
+        "server.headless": True,
+        "browser.gatherUsageStats": False,
+        "global.developmentMode": False,
+    }
+    bootstrap.run(str(app_path), False, [], flag_options)
 
 
 def find_available_port(start_port: int) -> int:
@@ -113,23 +97,22 @@ def find_available_port(start_port: int) -> int:
     raise RuntimeError("Nenhuma porta local disponivel para iniciar o GeoProfiler.")
 
 
-def wait_for_server(host: str, port: int, timeout_seconds: int = 25) -> None:
+def wait_for_server(host: str, port: int, timeout_seconds: int = 25) -> bool:
     """Wait briefly for Streamlit to start before opening the browser."""
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.settimeout(0.5)
             if sock.connect_ex((host, port)) == 0:
-                return
+                return True
         time.sleep(0.4)
+    return False
 
 
-def get_subprocess_flags() -> int:
-    """Return Windows subprocess flags when available."""
-    if os.name != "nt":
-        return 0
-
-    return getattr(subprocess, "CREATE_NO_WINDOW", 0)
+def open_browser_when_ready(host: str, port: int, url: str) -> None:
+    """Open the browser once when the local Streamlit server is ready."""
+    if wait_for_server(host, port):
+        webbrowser.open_new(url)
 
 
 if __name__ == "__main__":
