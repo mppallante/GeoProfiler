@@ -75,8 +75,8 @@ def prepare_statistics_data(crimes: pd.DataFrame) -> pd.DataFrame:
         return prepared
 
     prepared["data"] = pd.to_datetime(prepared["data"], errors="coerce")
-    prepared["tipo_crime"] = prepared["tipo_crime"].replace("", "Nao informado")
-    prepared["bairro"] = prepared["bairro"].replace("", "Nao informado")
+    prepared["tipo_crime"] = prepared["tipo_crime"].replace("", "Não informado")
+    prepared["bairro"] = prepared["bairro"].replace("", "Não informado")
     prepared["hora"] = prepared["hora"].fillna("").astype(str)
     prepared["hora_numero"] = pd.to_numeric(
         prepared["hora"].str.slice(0, 2),
@@ -97,9 +97,9 @@ def calculate_frequency(
 
     frequency = (
         crimes[column]
-        .fillna("Nao informado")
+        .fillna("Não informado")
         .astype(str)
-        .replace("", "Nao informado")
+        .replace("", "Não informado")
         .value_counts()
         .rename_axis(label)
         .reset_index(name="total")
@@ -117,20 +117,20 @@ def calculate_weekday_frequency(crimes: pd.DataFrame) -> pd.DataFrame:
 
     weekday_order = [
         "Segunda",
-        "Terca",
+        "Terça",
         "Quarta",
         "Quinta",
         "Sexta",
-        "Sabado",
+        "Sábado",
         "Domingo",
     ]
     weekday_map = {
         0: "Segunda",
-        1: "Terca",
+        1: "Terça",
         2: "Quarta",
         3: "Quinta",
         4: "Sexta",
-        5: "Sabado",
+        5: "Sábado",
         6: "Domingo",
     }
 

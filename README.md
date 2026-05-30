@@ -1,12 +1,14 @@
 # GeoProfiler
 
-GeoProfiler e uma aplicacao inicial em Python para perfilamento geografico criminal, construida com Streamlit, Pandas, GeoPandas e Folium.
+GeoProfiler é uma ferramenta em Python para apoio ao Perfilamento Geográfico Criminal, construída com Streamlit, Pandas, GeoPandas, Folium e Plotly.
 
-Esta versao contem uma estrutura profissional inicial com cadastro manual de crimes, persistencia em CSV, metricas basicas e visualizacao das ocorrencias em mapa.
+A versão 2 evolui o projeto de um dashboard geográfico para um ambiente analítico investigativo com cadastro de ocorrências, mapa tático, estatísticas, análise espacial, zonas de perfilamento e relatório de inteligência geográfica.
 
 ## Objetivo
 
-Organizar uma base modular para evoluir uma aplicacao de analise geografica criminal, mantendo separacao clara entre interface, carregamento de dados, visualizacao em mapa, estatisticas e utilidades.
+Fornecer uma base modular para análise exploratória de ocorrências criminais georreferenciadas, apoiando triagem territorial, identificação de concentração espacial e formulação de hipóteses investigativas.
+
+Os resultados são hipóteses investigativas e não conclusões periciais.
 
 ## Tecnologias
 
@@ -16,6 +18,8 @@ Organizar uma base modular para evoluir uma aplicacao de analise geografica crim
 - GeoPandas
 - Folium
 - Streamlit Folium
+- Plotly
+- PyInstaller
 
 ## Estrutura
 
@@ -26,6 +30,7 @@ GeoProfiler/
 |-- build_exe.bat
 |-- requirements.txt
 |-- README.md
+|-- LICENSE
 |-- .gitignore
 |-- .streamlit/
 |   `-- config.toml
@@ -41,7 +46,7 @@ GeoProfiler/
     `-- utils.py
 ```
 
-## Como Executar
+## Como executar
 
 ### Modo desenvolvimento
 
@@ -59,25 +64,25 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-2. Instale as dependencias:
+2. Instale as dependências:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Execute a aplicacao:
+3. Execute a aplicação:
 
 ```bash
 streamlit run app.py
 ```
 
-Tambem e possivel executar pelo launcher usado no empacotamento:
+Também é possível executar pelo launcher usado no empacotamento:
 
 ```bash
 python launcher.py
 ```
 
-### Como executavel
+### Como executável
 
 Depois de gerar o build, execute:
 
@@ -85,37 +90,27 @@ Depois de gerar o build, execute:
 .\dist\GeoProfiler.exe
 ```
 
-O executavel inicia o Streamlit automaticamente, escolhe uma porta local disponivel e abre o navegador. A base de dados persistente fica em `dist\data\crimes.csv`, ao lado do executavel.
+O executável inicia o Streamlit automaticamente, escolhe uma porta local disponível e abre o navegador. A base persistente fica em `dist\data\crimes.csv`, ao lado do executável.
 
-## Como gerar o executavel
+## Como gerar o executável
 
-No Windows, de duplo clique em:
+No Windows, dê duplo clique em:
 
 ```text
 build_exe.bat
 ```
 
-O script cria o ambiente virtual `.venv` caso ele ainda nao exista, instala as dependencias de `requirements.txt` e usa PyInstaller para gerar:
+O script cria o ambiente virtual `.venv` caso ele ainda não exista, instala as dependências de `requirements.txt` e usa PyInstaller para gerar:
 
 ```text
 dist\GeoProfiler.exe
 ```
 
-Para gerar um novo build, execute novamente `build_exe.bat`. O processo usa `--clean` e `--noconfirm`, recriando os artefatos em `build/` e `dist/`.
+Para gerar um novo build, execute novamente `build_exe.bat`.
 
-Arquivos incluidos no executavel:
+## Formato dos dados
 
-- `launcher.py`
-- `app.py`
-- `src/`
-- `data/`
-- `assets/`
-- `.streamlit/`
-- `requirements.txt`
-
-## Formato dos Dados
-
-O arquivo CSV e criado automaticamente em `data/crimes.csv` quando ainda nao existir. A base utiliza as seguintes colunas:
+O arquivo CSV é criado automaticamente em `data/crimes.csv` quando ainda não existir. O formato deve permanecer compatível com as colunas abaixo:
 
 - `id`
 - `tipo_crime`
@@ -128,51 +123,23 @@ O arquivo CSV e criado automaticamente em `data/crimes.csv` quando ainda nao exi
 - `modus_operandi`
 - `observacoes`
 
-Um arquivo de exemplo esta disponivel em `data/crimes.csv`.
+## Funcionalidades
 
-## Entrada de Dados
+- Cadastro manual de ocorrências
+- Persistência em CSV
+- Mapa interativo com camadas claro/escuro
+- Clusterização de ocorrências
+- Heatmap contínuo de densidade espacial
+- Centro de Gravidade Criminal (CGC)
+- Zona de conforto
+- Base de operações estimada
+- Zona de segurança
+- Classificação geográfica Marauder/Commuter
+- Relatório de inteligência geográfica
+- Estatísticas por tipo de crime, bairro, dia, horário e linha do tempo
+- Tema claro e tema escuro
+- Build Windows com PyInstaller
 
-A tela principal permite cadastrar ocorrencias manualmente. O sistema gera o ID automaticamente, valida latitude e longitude, salva os registros na base local e atualiza a tabela de crimes cadastrados.
+## Licença
 
-## Analise Geografica Criminal
-
-O modulo `src/geo_analysis.py` calcula indicadores exploratorios iniciais:
-
-- Centro medio geografico
-- Distancia de cada crime ate o centro
-- Distancia media e desvio padrao espacial
-- Crime mais proximo e mais distante do centro
-- Grade geografica com contagem por celula
-- Ranking das celulas mais criticas
-- Interpretacao automatica com hipoteses e limitacoes
-
-## Modulo Estatistico
-
-O modulo `src/statistics.py` gera as tabelas estatisticas usadas pelo dashboard:
-
-- Frequencia por tipo de crime
-- Frequencia por bairro
-- Frequencia por dia da semana
-- Frequencia por horario
-- Linha do tempo dos crimes
-- Dados estruturados para graficos interativos no Streamlit
-
-## Interface
-
-A aplicacao usa tema escuro profissional, sidebar com logotipo, cards de indicadores, abas operacionais e graficos interativos com estilo visual consistente para uso analitico e investigativo.
-
-## Status do Projeto
-
-Estrutura inicial criada. A logica avancada de perfilamento geografico ainda nao foi implementada.
-
-## Roadmap Inicial
-
-- Validacao robusta dos dados carregados
-- Filtros por periodo e tipo de crime
-- Camadas avancadas de visualizacao geografica
-- Analises estatisticas e espaciais
-- Exportacao de relatorios
-
-## Licenca
-
-Defina a licenca do projeto antes da publicacao.
+Projeto proprietário. Todos os direitos reservados.

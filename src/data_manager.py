@@ -136,7 +136,7 @@ def prepare_crime_data(data: pd.DataFrame) -> pd.DataFrame:
     missing_columns = REQUIRED_COLUMNS.difference(data.columns)
     if missing_columns:
         missing = ", ".join(sorted(missing_columns))
-        raise ValueError(f"Colunas obrigatorias ausentes: {missing}")
+        raise ValueError(f"Colunas obrigatórias ausentes: {missing}")
 
     cleaned = data.copy()
     cleaned = add_missing_columns(cleaned)
