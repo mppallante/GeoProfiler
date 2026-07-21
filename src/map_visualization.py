@@ -39,7 +39,9 @@ def create_crime_map(
     crime_map = _create_base_map(map_center, DEFAULT_ZOOM)
     _add_clustered_markers(crime_map, crimes)
     _add_density_heatmap(crime_map, analysis)
+    _add_rossmo_heatmap(crime_map, analysis)
     _add_profile_zones(crime_map, analysis)
+    _add_canter_circle(crime_map, analysis)
     _add_central_gravity_point(crime_map, crimes, analysis)
     _fit_map_to_crimes(crime_map, crimes)
 
@@ -103,6 +105,51 @@ def _add_density_heatmap(crime_map: folium.Map, analysis: GeographicAnalysis) ->
             0.75: "#fdae61",
             1.0: "#d7191c",
         },
+    ).add_to(crime_map)
+
+
+def _add_rossmo_heatmap(crime_map: folium.Map, analysis: GeographicAnalysis) -> None:
+    """Add Rossmo's CGT probability surface as an optional heatmap layer."""
+    if not analysis.rossmo_surface:
+        return
+
+    HeatMap(
+        analysis.rossmo_surface,
+        name="Perfil de Rossmo (CGT)",
+        radius=34,
+        blur=28,
+        min_opacity=0.18,
+        max_zoom=15,
+        show=False,
+        gradient={
+            0.15: "#3f2d63",
+            0.35: "#7b4ea3",
+            0.55: "#c46fb3",
+            0.75: "#f2915a",
+            1.0: "#ffb703",
+        },
+    ).add_to(crime_map)
+
+
+def _add_canter_circle(crime_map: folium.Map, analysis: GeographicAnalysis) -> None:
+    """Add Canter's Circle Hypothesis as a dashed, unfilled circle."""
+    circle = analysis.canter_circle
+    if circle is None or circle.radius_km <= 0:
+        return
+
+    id_a, id_b = circle.farthest_pair
+    folium.Circle(
+        location=[circle.center.latitude, circle.center.longitude],
+        radius=circle.radius_km * 1000,
+        color="#8b5cf6",
+        weight=2,
+        dash_array="8, 8",
+        fill=False,
+        popup=folium.Popup(
+            _build_canter_circle_popup(circle.center, circle.radius_km, id_a, id_b),
+            max_width=360,
+        ),
+        tooltip="Círculo de Canter",
     ).add_to(crime_map)
 
 
@@ -243,6 +290,22 @@ def _build_cgc_popup(center, total_crimes: int) -> str:
         f"<strong>Latitude:</strong> {center.latitude:.6f}<br>"
         f"<strong>Longitude:</strong> {center.longitude:.6f}<br>"
         f"<strong>Ocorrências analisadas:</strong> {total_crimes}"
+        "</div>"
+    )
+
+
+def _build_canter_circle_popup(center, radius_km: float, id_a: int, id_b: int) -> str:
+    """Build popup for Canter's Circle Hypothesis."""
+    return (
+        "<div style='font-family:Arial,sans-serif;min-width:280px;'>"
+        "<div style='font-size:15px;font-weight:900;color:#8b5cf6;margin-bottom:8px;'>"
+        "Círculo de Canter</div>"
+        f"<strong>Centro:</strong> {center.latitude:.6f}, {center.longitude:.6f}<br>"
+        f"<strong>Raio:</strong> {radius_km:.2f} km<br>"
+        f"<strong>Definido pelos crimes:</strong> #{id_a} e #{id_b} (os mais distantes "
+        "entre si da série)<br><br>"
+        "A hipótese do Círculo de Canter espera que a base do infrator esteja "
+        "localizada dentro deste círculo."
         "</div>"
     )
 

@@ -73,7 +73,6 @@ echo Gerando GeoProfiler.exe...
     --collect-all folium ^
     --collect-all branca ^
     --collect-all plotly ^
-    --collect-all geopandas ^
     launcher.py
 
 if errorlevel 1 (

@@ -1,24 +1,27 @@
 # GeoProfiler
 
-GeoProfiler é uma ferramenta em Python para apoio ao Perfilamento Geográfico Criminal, construída com Streamlit, Pandas, GeoPandas, Folium e Plotly.
+GeoProfiler é uma ferramenta em Python para apoio ao Perfilamento Geográfico Criminal, construída com Streamlit, Pandas, Folium e Plotly.
 
-A versão 2 evolui o projeto de um dashboard geográfico para um ambiente analítico investigativo com cadastro de ocorrências, mapa tático, estatísticas, análise espacial, zonas de perfilamento e relatório de inteligência geográfica.
+A versão 2 evolui o projeto de um dashboard geográfico para um ambiente analítico investigativo multi-caso: cada investigação/série é um **Caso** independente, com seu próprio cadastro de ocorrências, mapa tático, estatísticas e relatório de inteligência geográfica em linguagem natural.
 
 ## Objetivo
 
-Fornecer uma base modular para análise exploratória de ocorrências criminais georreferenciadas, apoiando triagem territorial, identificação de concentração espacial e formulação de hipóteses investigativas.
+Fornecer uma base modular para análise exploratória de ocorrências criminais georreferenciadas, apoiando triagem territorial, identificação de concentração espacial e formulação de hipóteses investigativas, para múltiplos casos independentes.
 
 Os resultados são hipóteses investigativas e não conclusões periciais.
 
 ## Tecnologias
 
 - Python
-- Streamlit
+- Streamlit (navegação multi-página via `st.navigation`)
+- SQLite (`sqlite3` da biblioteca padrão, sem ORM)
 - Pandas
-- GeoPandas
 - Folium
 - Streamlit Folium
 - Plotly
+- Requests (geocodificação via Nominatim/OpenStreetMap)
+- Openpyxl (importação de XLSX)
+- fpdf2 (geração de relatório PDF)
 - PyInstaller
 
 ## Estrutura
@@ -29,6 +32,8 @@ GeoProfiler/
 |-- launcher.py
 |-- build_exe.bat
 |-- requirements.txt
+|-- requirements-dev.txt
+|-- pytest.ini
 |-- README.md
 |-- LICENSE
 |-- .gitignore
@@ -37,13 +42,30 @@ GeoProfiler/
 |-- assets/
 |   `-- logo.png
 |-- data/
-|   `-- crimes.csv
-`-- src/
-    |-- data_manager.py
-    |-- map_visualization.py
-    |-- geo_analysis.py
-    |-- statistics.py
-    `-- utils.py
+|   |-- crimes.csv          (seed/exemplo, migrado uma única vez)
+|   `-- geoprofiler.db      (gerado em tempo de execução, não versionado)
+|-- scripts/
+|   `-- migrate_to_sqlite.py
+|-- src/
+|   |-- data_manager.py     (camada de acesso a dados: casos e crimes)
+|   |-- db.py                (conexão e schema SQLite)
+|   |-- map_visualization.py
+|   |-- geo_analysis.py
+|   |-- statistics.py
+|   |-- crime_import.py     (importação de CSV/XLSX e mapeamento de colunas)
+|   |-- geocoding.py        (geocodificação de endereço via Nominatim)
+|   |-- report_export.py    (exportação de mapa HTML e relatório PDF)
+|   |-- utils.py
+|   `-- pages/
+|       |-- _shared.py       (chrome e helpers compartilhados)
+|       |-- casos.py         (escolha e cadastro de casos e ocorrências)
+|       |-- mapa.py
+|       |-- estatisticas.py
+|       `-- analise_automatizada.py
+`-- tests/
+    |-- test_geo_analysis.py
+    |-- test_data_manager_db.py
+    `-- fixtures/
 ```
 
 ## Como executar
@@ -90,7 +112,7 @@ Depois de gerar o build, execute:
 .\dist\GeoProfiler.exe
 ```
 
-O executável inicia o Streamlit automaticamente, escolhe uma porta local disponível e abre o navegador. A base persistente fica em `dist\data\crimes.csv`, ao lado do executável.
+O executável inicia o Streamlit automaticamente, escolhe uma porta local disponível e abre o navegador. A base persistente fica em `dist\data\geoprofiler.db`, ao lado do executável. Na primeira execução, o `data/crimes.csv` de exemplo é migrado automaticamente para um caso chamado "Caso Exemplo".
 
 ## Como gerar o executável
 
@@ -108,9 +130,9 @@ dist\GeoProfiler.exe
 
 Para gerar um novo build, execute novamente `build_exe.bat`.
 
-## Formato dos dados
+## Casos
 
-O arquivo CSV é criado automaticamente em `data/crimes.csv` quando ainda não existir. O formato deve permanecer compatível com as colunas abaixo:
+Cada investigação/série de crimes é um **Caso** independente (`nome`, `descrição`, `responsável`, `data de abertura`, `notas`), com seu próprio conjunto de ocorrências — sem compartilhamento de dados entre casos. Os dados ficam em `data/geoprofiler.db` (SQLite), criado automaticamente na primeira execução. Cada ocorrência pertence a exatamente um caso e usa as colunas abaixo:
 
 - `id`
 - `tipo_crime`
@@ -125,20 +147,37 @@ O arquivo CSV é criado automaticamente em `data/crimes.csv` quando ainda não e
 
 ## Funcionalidades
 
-- Cadastro manual de ocorrências
-- Persistência em CSV
+- Gestão de múltiplos casos (séries/investigações) independentes
+- Cadastro manual de ocorrências por caso
+- Persistência em SQLite local, sem servidor
 - Mapa interativo com camadas claro/escuro
 - Clusterização de ocorrências
-- Heatmap contínuo de densidade espacial
+- Heatmap contínuo de densidade espacial (vetorizado com NumPy)
+- Perfil de probabilidade de Rossmo (CGT — Criminal Geographic Targeting), com camada própria no mapa
 - Centro de Gravidade Criminal (CGC)
 - Zona de conforto
 - Base de operações estimada
 - Zona de segurança
-- Classificação geográfica Marauder/Commuter
-- Relatório de inteligência geográfica
+- Círculo de Canter (Circle Hypothesis) com raio de buffer ajustável pelo usuário
+- Classificação geográfica Marauder/Commuter baseada no teste geométrico do Círculo de Canter
+- Classificação de ocorrências dentro/fora da zona de buffer
+- Relatório de inteligência geográfica em linguagem natural (página de Análise Automatizada), incluindo as premissas metodológicas do modelo de Rossmo
+- Importação em massa de ocorrências via CSV/XLSX, com mapeamento de colunas assistido
+- Geocodificação de endereço para latitude/longitude (Nominatim/OpenStreetMap) no cadastro manual
+- Exportação do mapa interativo (HTML) e de um relatório do caso (PDF) com resumo, zonas, relatório narrativo e lista de ocorrências
+- Comparação de métodos de decaimento (Rossmo, exponencial negativa, linear, normal/gaussiana) — mostra o quanto o pico de probabilidade estimado muda conforme a premissa metodológica escolhida
+- Classificação de bairros em Zona de Conforto/Transição, com base na distância média ao CGC
+- Anotação de barreiras geográficas (rios, rodovias) por caso, editável e referenciada no relatório narrativo
 - Estatísticas por tipo de crime, bairro, dia, horário e linha do tempo
 - Tema claro e tema escuro
 - Build Windows com PyInstaller
+
+## Testes
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
 
 ## Licença
 
