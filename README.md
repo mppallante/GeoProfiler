@@ -2,7 +2,7 @@
 
 GeoProfiler é uma ferramenta em Python para apoio ao Perfilamento Geográfico Criminal, construída com Streamlit, Pandas, Folium e Plotly.
 
-A versão 2 evolui o projeto de um dashboard geográfico para um ambiente analítico investigativo multi-caso: cada investigação/série é um **Caso** independente, com seu próprio cadastro de ocorrências, mapa tático, estatísticas e relatório de inteligência geográfica em linguagem natural.
+É um ambiente analítico investigativo multi-caso: cada investigação/série é um **Caso** independente, com seu próprio cadastro de ocorrências, mapa tático, estatísticas e relatório de inteligência geográfica em linguagem natural, podendo ser arquivado ou vinculado a outros casos relacionados.
 
 ## Objetivo
 
@@ -137,7 +137,7 @@ Para gerar um novo build, execute novamente `build_exe.bat`.
 
 ## Casos
 
-Cada investigação/série de crimes é um **Caso** independente (`nome`, `descrição`, `responsável`, `data de abertura`, `notas`), com seu próprio conjunto de ocorrências — sem compartilhamento de dados entre casos. Os dados ficam em `data/geoprofiler.db` (SQLite), criado automaticamente na primeira execução. Cada ocorrência pertence a exatamente um caso e usa as colunas abaixo:
+Cada investigação/série de crimes é um **Caso** independente (`nome`, `descrição`, `responsável`, `data de abertura`, `notas`, `barreiras geográficas`), com seu próprio conjunto de ocorrências — sem compartilhamento de dados entre casos. Um caso pode ser **arquivado** (some da lista padrão, continua utilizável enquanto aberto, reversível a qualquer momento) e pode ser **vinculado** a outros casos suspeitos de estarem relacionados (ex.: mesmo autor/série) — o vínculo é simétrico e aparece dos dois lados. Os dados ficam em `data/geoprofiler.db` (SQLite), criado automaticamente na primeira execução. Cada ocorrência pertence a exatamente um caso e usa as colunas abaixo:
 
 - `id`
 - `tipo_crime`
