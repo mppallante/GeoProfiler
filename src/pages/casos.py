@@ -35,6 +35,7 @@ from src.pages._shared import (
     get_caso,
     inject_global_styles,
     load_case_crimes,
+    render_badge,
     render_case_header,
     render_header,
     render_metric_card,
@@ -78,7 +79,7 @@ def render_case_list() -> None:
             with cols[0]:
                 st.markdown(f"**{row['nome']}**")
                 if is_archived:
-                    st.caption("🗄 Arquivado")
+                    st.markdown(render_badge("Arquivado", "neutral"), unsafe_allow_html=True)
                 if row["descricao"]:
                     st.caption(row["descricao"])
             with cols[1]:
@@ -88,7 +89,8 @@ def render_case_list() -> None:
                 st.write(row["data_abertura"] or "-")
             with cols[3]:
                 label = "Reativar" if is_archived else "Abrir"
-                if st.button(label, key=f"abrir_caso_{row['id']}", width="stretch"):
+                icon = ":material/unarchive:" if is_archived else ":material/open_in_new:"
+                if st.button(label, key=f"abrir_caso_{row['id']}", icon=icon, width="stretch"):
                     if is_archived:
                         set_caso_archived(int(row["id"]), False)
                     st.session_state["active_caso_id"] = int(row["id"])
@@ -113,7 +115,7 @@ def render_new_case_form() -> None:
             placeholder="Ex.: Rio Pinheiros a oeste, Marginal Tietê ao norte",
             help="Rios, rodovias ou outras barreiras que possam limitar o deslocamento do infrator.",
         )
-        submitted = st.form_submit_button("Criar caso", width="stretch")
+        submitted = st.form_submit_button("Criar caso", icon=":material/save:", width="stretch")
 
     if not submitted:
         return
@@ -142,12 +144,13 @@ def render_active_case(caso: Caso, theme: str) -> None:
 
     action_cols = st.columns([1, 1, 6])
     with action_cols[0]:
-        if st.button("Trocar caso"):
+        if st.button("Trocar caso", icon=":material/swap_horiz:"):
             st.session_state.pop("active_caso_id", None)
             st.rerun()
     with action_cols[1]:
         toggle_label = "Reativar caso" if caso.arquivado else "Arquivar caso"
-        if st.button(toggle_label):
+        toggle_icon = ":material/unarchive:" if caso.arquivado else ":material/archive:"
+        if st.button(toggle_label, icon=toggle_icon):
             set_caso_archived(caso.id, not caso.arquivado)
             st.rerun()
 
@@ -165,15 +168,15 @@ def render_active_case(caso: Caso, theme: str) -> None:
     crimes = load_case_crimes(caso.id)
 
     metric_cols = st.columns(3)
-    render_metric_card(metric_cols[0], "◆", "Ocorrências", str(len(crimes)), "Registros válidos")
+    render_metric_card(metric_cols[0], "list_alt", "Ocorrências", str(len(crimes)), "Registros válidos")
     render_metric_card(
         metric_cols[1],
-        "▣",
+        "category",
         "Tipos de crime",
         str(crimes["tipo_crime"].nunique()) if not crimes.empty else "0",
         "Categorias distintas",
     )
-    render_metric_card(metric_cols[2], "🖊", "Responsável", caso.responsavel or "Não informado", "Caso")
+    render_metric_card(metric_cols[2], "badge", "Responsável", caso.responsavel or "Não informado", "Caso")
 
     st.markdown("#### Ocorrências cadastradas")
     st.dataframe(format_crime_table(crimes), width="stretch", hide_index=True)
@@ -203,7 +206,7 @@ def render_edit_case_form(caso: Caso) -> None:
                 placeholder="Ex.: Rio Pinheiros a oeste, Marginal Tietê ao norte",
                 help="Rios, rodovias ou outras barreiras que possam limitar o deslocamento do infrator.",
             )
-            submitted = st.form_submit_button("Salvar alterações", width="stretch")
+            submitted = st.form_submit_button("Salvar alterações", icon=":material/save:", width="stretch")
 
         if not submitted:
             return
@@ -241,11 +244,21 @@ def render_related_cases_section(caso: Caso) -> None:
                     if row["descricao"]:
                         st.caption(row["descricao"])
                 with link_cols[1]:
-                    if st.button("Abrir", key=f"abrir_relacionado_{row['id']}", width="stretch"):
+                    if st.button(
+                        "Abrir",
+                        key=f"abrir_relacionado_{row['id']}",
+                        icon=":material/open_in_new:",
+                        width="stretch",
+                    ):
                         st.session_state["active_caso_id"] = int(row["id"])
                         st.switch_page("src/pages/mapa.py")
                 with link_cols[2]:
-                    if st.button("Desvincular", key=f"desvincular_{row['id']}", width="stretch"):
+                    if st.button(
+                        "Desvincular",
+                        key=f"desvincular_{row['id']}",
+                        icon=":material/link_off:",
+                        width="stretch",
+                    ):
                         unlink_casos(caso.id, int(row["id"]))
                         st.rerun()
 
@@ -266,7 +279,7 @@ def render_related_cases_section(caso: Caso) -> None:
             format_func=lambda cid: options[cid],
             key=f"link_target_{caso.id}",
         )
-        if st.button("Vincular", key=f"vincular_{caso.id}"):
+        if st.button("Vincular", key=f"vincular_{caso.id}", icon=":material/link:"):
             link_casos(caso.id, selected_id)
             st.rerun()
 
@@ -297,7 +310,7 @@ def render_registration_form(caso_id: int) -> None:
         )
     with address_cols[1]:
         st.markdown("<div style='height: 1.85rem'></div>", unsafe_allow_html=True)
-        if st.button("Buscar coordenadas", width="stretch"):
+        if st.button("Buscar coordenadas", icon=":material/my_location:", width="stretch"):
             coordinate = geocode_address(address)
             if coordinate is None:
                 st.warning("Endereço não encontrado.")
@@ -336,7 +349,7 @@ def render_registration_form(caso_id: int) -> None:
             modus_operandi = st.text_area("Modus operandi", height=90)
             observacoes = st.text_area("Observações", height=90)
 
-        submitted = st.form_submit_button("Salvar ocorrência", width="stretch")
+        submitted = st.form_submit_button("Salvar ocorrência", icon=":material/save:", width="stretch")
 
     if not submitted:
         return

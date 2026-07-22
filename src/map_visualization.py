@@ -19,6 +19,32 @@ from src.geo_analysis import (
 DEFAULT_MAP_CENTER = [-23.550520, -46.633308]
 DEFAULT_ZOOM = 12
 
+CRIME_TYPE_COLORWAY = ["#0b5ed7", "#e2565b", "#2ca25f", "#f0ad4e", "#6f42c1"]
+
+
+def ordered_crime_types(crimes: pd.DataFrame) -> list[str]:
+    """Unique tipo_crime values sorted alphabetically, for stable color assignment.
+
+    Sorted (not first-seen order) so the same tipo_crime always maps to the
+    same color regardless of which page/dataframe computes the list — Mapa
+    and Estatísticas each call this independently on their own crimes frame.
+    """
+    if crimes.empty:
+        return []
+    return sorted(crimes["tipo_crime"].unique())
+
+
+def crime_type_color(tipo_crime: str, ordered_types: list[str]) -> str:
+    """Deterministic color for a crime type, cycling CRIME_TYPE_COLORWAY.
+
+    The same tipo_crime always gets the same color across the map pins, the
+    crime list panel, and the donut chart, as long as callers pass the same
+    ordered_types list (computed once per case via ordered_crime_types).
+    """
+    if tipo_crime not in ordered_types:
+        return CRIME_TYPE_COLORWAY[-1]
+    return CRIME_TYPE_COLORWAY[ordered_types.index(tipo_crime) % len(CRIME_TYPE_COLORWAY)]
+
 
 def create_crime_map(
     crimes: pd.DataFrame,
@@ -37,7 +63,7 @@ def create_crime_map(
     )
 
     crime_map = _create_base_map(map_center, DEFAULT_ZOOM)
-    _add_clustered_markers(crime_map, crimes)
+    _add_clustered_markers(crime_map, crimes, ordered_crime_types(crimes))
     _add_density_heatmap(crime_map, analysis)
     _add_rossmo_heatmap(crime_map, analysis)
     _add_profile_zones(crime_map, analysis)
@@ -73,16 +99,29 @@ def _create_base_map(location: list[float], zoom_start: int) -> folium.Map:
     return crime_map
 
 
-def _add_clustered_markers(crime_map: folium.Map, crimes: pd.DataFrame) -> None:
-    """Add all crime markers inside a marker cluster layer."""
+def _add_clustered_markers(
+    crime_map: folium.Map,
+    crimes: pd.DataFrame,
+    ordered_types: list[str],
+) -> None:
+    """Add all crime markers inside a marker cluster layer, colored by tipo_crime."""
     marker_cluster = MarkerCluster(name="Ocorrências agrupadas").add_to(crime_map)
 
     for _, row in crimes.iterrows():
+        color = crime_type_color(row["tipo_crime"], ordered_types)
         folium.Marker(
             location=[row["latitude"], row["longitude"]],
             popup=folium.Popup(_build_popup(row), max_width=320),
             tooltip=_build_tooltip(row),
-            icon=folium.Icon(color="red", icon="exclamation-sign"),
+            icon=folium.DivIcon(
+                icon_size=(16, 16),
+                icon_anchor=(8, 8),
+                html=(
+                    f'<div style="width:16px;height:16px;border-radius:50%;'
+                    f'background:{color};border:2px solid #ffffff;'
+                    f'box-shadow:0 0 4px rgba(0,0,0,0.45);"></div>'
+                ),
+            ),
         ).add_to(marker_cluster)
 
 

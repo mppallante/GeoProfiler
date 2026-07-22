@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from src.map_visualization import crime_type_color, ordered_crime_types
 from src.pages._shared import (
     format_frequency_table,
     inject_global_styles,
@@ -31,10 +33,10 @@ def main() -> None:
     crimes = render_date_range_filter(caso, crimes)
     dashboard = _cached_build_statistical_dashboard(crimes)
 
-    render_statistical_dashboard(dashboard, theme)
+    render_statistical_dashboard(dashboard, crimes, theme)
 
 
-def render_statistical_dashboard(dashboard: StatisticalDashboard, theme: str) -> None:
+def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.DataFrame, theme: str) -> None:
     """Render interactive statistical charts and frequency tables."""
     st.subheader("Dashboard estatístico")
 
@@ -42,16 +44,20 @@ def render_statistical_dashboard(dashboard: StatisticalDashboard, theme: str) ->
         st.warning("Cadastre crimes válidos para gerar estatísticas.")
         return
 
+    ordered_types = ordered_crime_types(crimes)
     top_cols = st.columns(2)
     with top_cols[0]:
-        crime_type_chart = px.bar(
+        crime_type_chart = px.pie(
             dashboard.crime_type_frequency,
-            x="tipo_crime",
-            y="total",
-            text="total",
+            values="total",
+            names="tipo_crime",
+            hole=0.55,
             title="Frequência por tipo de crime",
+            color="tipo_crime",
+            color_discrete_map={t: crime_type_color(t, ordered_types) for t in ordered_types},
             labels={"tipo_crime": "Tipo de crime", "total": "Ocorrências"},
         )
+        crime_type_chart.update_traces(textinfo="percent+label")
         st.plotly_chart(style_chart(crime_type_chart, theme), width="stretch")
 
     with top_cols[1]:

@@ -12,6 +12,7 @@ import streamlit as st
 
 from src.data_manager import Caso, get_caso, read_case_crimes
 from src.db import DB_PATH
+from src.map_visualization import CRIME_TYPE_COLORWAY
 
 LOGO_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "logo.png"
 
@@ -188,6 +189,25 @@ def render_date_range_filter(caso: Caso, crimes: pd.DataFrame) -> pd.DataFrame:
 def inject_global_styles(theme: str) -> None:
     """Inject theme-aware investigative interface styles."""
     palette = get_theme_palette(theme)
+
+    if theme == "light":
+        zone_card_finish = """
+        .gp-zone-card, .gp-report-card {
+            background: color-mix(in srgb, var(--gp-surface) 78%, transparent);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow: var(--gp-shadow);
+        }
+        """
+    else:
+        zone_card_finish = """
+        .gp-zone-card, .gp-report-card {
+            background: var(--gp-surface);
+            box-shadow: 0 0 0 1px var(--gp-border),
+                0 0 24px color-mix(in srgb, var(--gp-accent) 18%, transparent);
+        }
+        """
+
     st.markdown(
         f"""
         <style>
@@ -201,7 +221,13 @@ def inject_global_styles(theme: str) -> None:
             --gp-muted: {palette["muted"]};
             --gp-accent: {palette["accent"]};
             --gp-accent-2: {palette["accent_2"]};
+            --gp-amber: {palette["amber"]};
             --gp-shadow: {palette["shadow"]};
+            --gp-radius-s: 8px;
+            --gp-radius-m: 12px;
+            --gp-radius-l: 18px;
+            --gp-font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+            --gp-font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
         }}
 
         .stApp {{
@@ -231,7 +257,7 @@ def inject_global_styles(theme: str) -> None:
         .gp-logo-frame {{
             background: #ffffff;
             border: 1px solid #d6dde5;
-            border-radius: 8px;
+            border-radius: var(--gp-radius-m);
             padding: 12px;
             margin-bottom: 14px;
             box-shadow: var(--gp-shadow);
@@ -256,7 +282,7 @@ def inject_global_styles(theme: str) -> None:
             line-height: 1.5;
             padding: 12px;
             border: 1px solid var(--gp-border);
-            border-radius: 8px;
+            border-radius: var(--gp-radius-m);
             background: var(--gp-surface);
             box-shadow: var(--gp-shadow);
         }}
@@ -264,7 +290,7 @@ def inject_global_styles(theme: str) -> None:
         .gp-header {{
             border: 1px solid var(--gp-border);
             background: linear-gradient(135deg, var(--gp-surface), var(--gp-surface-2));
-            border-radius: 8px;
+            border-radius: var(--gp-radius-l);
             padding: 22px 24px;
             margin-bottom: 18px;
             box-shadow: var(--gp-shadow);
@@ -279,11 +305,12 @@ def inject_global_styles(theme: str) -> None:
             margin-bottom: 8px;
         }}
 
-        .gp-header-title {{
+        .gp-header .gp-header-title {{
             color: var(--gp-text);
+            font-family: var(--gp-font-display);
             font-size: 2.12rem;
             line-height: 1.1;
-            font-weight: 820;
+            font-weight: 600;
             margin: 0 0 8px 0;
         }}
 
@@ -296,7 +323,7 @@ def inject_global_styles(theme: str) -> None:
         .gp-card, .gp-metric-card, .gp-report-card, .gp-zone-card {{
             border: 1px solid var(--gp-border);
             background: var(--gp-surface);
-            border-radius: 8px;
+            border-radius: var(--gp-radius-l);
             box-shadow: var(--gp-shadow);
         }}
 
@@ -306,9 +333,15 @@ def inject_global_styles(theme: str) -> None:
         }}
 
         .gp-metric-icon {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--gp-radius-m);
+            background: color-mix(in srgb, var(--gp-accent) 16%, transparent);
             color: var(--gp-accent);
-            font-size: 1.25rem;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }}
 
         .gp-metric-label {{
@@ -322,8 +355,9 @@ def inject_global_styles(theme: str) -> None:
 
         .gp-metric-value {{
             color: var(--gp-text);
-            font-size: 1.55rem;
-            font-weight: 820;
+            font-family: var(--gp-font-mono);
+            font-size: 1.5rem;
+            font-weight: 700;
             line-height: 1.15;
             overflow-wrap: anywhere;
         }}
@@ -339,6 +373,8 @@ def inject_global_styles(theme: str) -> None:
             margin-bottom: 14px;
         }}
 
+        {zone_card_finish}
+
         .gp-card-title {{
             color: var(--gp-text);
             font-weight: 820;
@@ -353,21 +389,47 @@ def inject_global_styles(theme: str) -> None:
         }}
 
         .gp-badge {{
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
             border: 1px solid var(--gp-border);
             background: var(--gp-surface-2);
             color: var(--gp-accent);
-            border-radius: 999px;
-            padding: 4px 10px;
+            border-radius: var(--gp-radius-s);
+            padding: 4px 11px;
             font-size: 0.78rem;
             font-weight: 800;
             margin-bottom: 8px;
         }}
 
+        .gp-badge--accent {{
+            color: var(--gp-accent);
+            background: color-mix(in srgb, var(--gp-accent) 15%, transparent);
+            border-color: color-mix(in srgb, var(--gp-accent) 35%, transparent);
+        }}
+
+        .gp-badge--amber {{
+            color: var(--gp-amber);
+            background: color-mix(in srgb, var(--gp-amber) 18%, transparent);
+            border-color: color-mix(in srgb, var(--gp-amber) 40%, transparent);
+        }}
+
+        .gp-badge--alert {{
+            color: var(--gp-accent-2);
+            background: color-mix(in srgb, var(--gp-accent-2) 16%, transparent);
+            border-color: color-mix(in srgb, var(--gp-accent-2) 38%, transparent);
+        }}
+
+        .gp-badge--neutral {{
+            color: var(--gp-muted);
+            background: var(--gp-surface-2);
+            border-color: var(--gp-border);
+        }}
+
         [data-testid="stForm"] {{
             background: var(--gp-surface);
             border: 1px solid var(--gp-border);
-            border-radius: 8px;
+            border-radius: var(--gp-radius-m);
             padding: 18px;
             box-shadow: var(--gp-shadow);
         }}
@@ -402,7 +464,7 @@ def inject_global_styles(theme: str) -> None:
         .stTabs [data-baseweb="tab"] {{
             background: var(--gp-surface);
             border: 1px solid var(--gp-border);
-            border-radius: 8px 8px 0 0;
+            border-radius: var(--gp-radius-m) var(--gp-radius-m) 0 0;
             color: var(--gp-muted);
             padding: 10px 14px;
             font-weight: 700;
@@ -418,8 +480,9 @@ def inject_global_styles(theme: str) -> None:
             background: linear-gradient(135deg, var(--gp-accent), #14527a);
             color: white;
             border: 1px solid var(--gp-accent);
-            border-radius: 8px;
+            border-radius: var(--gp-radius-m);
             font-weight: 800;
+            box-shadow: var(--gp-shadow);
         }}
 
         .stButton > button:hover {{
@@ -430,12 +493,12 @@ def inject_global_styles(theme: str) -> None:
         [data-testid="stDataFrame"] {{
             background: var(--gp-surface);
             border: 1px solid var(--gp-border);
-            border-radius: 8px;
+            border-radius: var(--gp-radius-m);
             box-shadow: var(--gp-shadow);
         }}
 
         .stAlert {{
-            border-radius: 8px;
+            border-radius: var(--gp-radius-s);
         }}
         </style>
         """,
@@ -447,16 +510,17 @@ def get_theme_palette(theme: str) -> dict[str, str]:
     """Return CSS palette values for the selected theme."""
     if theme == "light":
         return {
-            "bg": "#f4f7fb",
-            "bg_soft": "#eaf0f7",
+            "bg": "#f6f3ec",
+            "bg_soft": "#efeade",
             "surface": "#ffffff",
-            "surface_2": "#eef5fb",
-            "border": "rgba(23, 60, 86, 0.16)",
-            "text": "#17212b",
-            "muted": "#51606a",
+            "surface_2": "#f4efe3",
+            "border": "rgba(40, 35, 28, 0.14)",
+            "text": "#1c2128",
+            "muted": "#5b6570",
             "accent": "#0b5ed7",
             "accent_2": "#b4232a",
-            "shadow": "0 12px 28px rgba(23, 60, 86, 0.10)",
+            "amber": "#b9812f",
+            "shadow": "0 12px 28px rgba(40, 35, 28, 0.08)",
         }
 
     return {
@@ -469,17 +533,48 @@ def get_theme_palette(theme: str) -> dict[str, str]:
         "muted": "#8ea6b5",
         "accent": "#4db6e8",
         "accent_2": "#e2565b",
+        "amber": "#d99a3d",
         "shadow": "0 18px 48px rgba(0, 0, 0, 0.28)",
     }
 
 
+def material_icon(name: str, size: int = 20) -> str:
+    """Return a Material Symbols glyph <span> usable inside raw unsafe_allow_html markup.
+
+    Streamlit's `:material/name:` shortcode only substitutes inside plain
+    st.markdown text, not inside HTML strings passed with unsafe_allow_html=True
+    (confirmed empirically). The "Material Symbols Rounded" face is already
+    loaded globally by Streamlit regardless, so this emits the same span
+    Streamlit generates internally for the shortcode, which renders correctly
+    inside custom HTML cards too.
+    """
+    return (
+        f'<span style="font-family:\'Material Symbols Rounded\'; '
+        f'font-weight:400; font-size:{size}px; vertical-align:middle; '
+        f'user-select:none;">{name}</span>'
+    )
+
+
+def render_badge(text: str, variant: str = "accent") -> str:
+    """Return a pill-badge <span> for use inside raw unsafe_allow_html markup.
+
+    variant is one of "accent", "amber", "alert", "neutral" (see the
+    .gp-badge--* rules in inject_global_styles).
+    """
+    return f'<span class="gp-badge gp-badge--{variant}">{escape(text)}</span>'
+
+
 def render_metric_card(column, icon: str, label: str, value: str, caption: str) -> None:
-    """Render a custom metric card in the given Streamlit column."""
+    """Render a custom metric card in the given Streamlit column.
+
+    `icon` is a Material Symbols icon name (e.g. "target"), rendered via
+    material_icon() inside the tinted icon chip.
+    """
     with column:
         st.markdown(
             f"""
             <div class="gp-metric-card">
-                <div class="gp-metric-icon">{escape(icon)}</div>
+                <div class="gp-metric-icon">{material_icon(icon)}</div>
                 <div class="gp-metric-label">{escape(label)}</div>
                 <div class="gp-metric-value">{escape(value)}</div>
                 <div class="gp-metric-caption">{escape(caption)}</div>
@@ -513,11 +608,11 @@ def style_chart(figure, theme: str):
         hovermode="x unified",
         title_font_size=18,
         title_font_color=font,
-        colorway=["#0b5ed7", "#e2565b", "#2ca25f", "#f0ad4e", "#6f42c1"],
+        colorway=CRIME_TYPE_COLORWAY,
     )
     figure.update_xaxes(gridcolor=grid, zerolinecolor=grid)
     figure.update_yaxes(gridcolor=grid, zerolinecolor=grid)
-    figure.update_traces(textposition="outside", selector=dict(type="bar"))
+    figure.update_traces(textposition="outside", marker_cornerradius=8, selector=dict(type="bar"))
     return figure
 
 
