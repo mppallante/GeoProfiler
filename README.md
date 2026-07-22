@@ -63,8 +63,13 @@ GeoProfiler/
 |       |-- estatisticas.py
 |       `-- analise_automatizada.py
 `-- tests/
+    |-- conftest.py
     |-- test_geo_analysis.py
     |-- test_data_manager_db.py
+    |-- test_crime_import.py
+    |-- test_geocoding.py
+    |-- test_report_export.py
+    |-- test_shared.py
     `-- fixtures/
 ```
 
@@ -148,9 +153,13 @@ Cada investigação/série de crimes é um **Caso** independente (`nome`, `descr
 ## Funcionalidades
 
 - Gestão de múltiplos casos (séries/investigações) independentes
+- Arquivamento de casos (ocultos da lista padrão, reversível, sem perda de dados)
+- Vínculo entre casos relacionados (ex.: suspeita de mesmo autor/série), simétrico e navegável
+- Filtro de período compartilhado entre Mapa, Estatísticas e Análise Automatizada
 - Cadastro manual de ocorrências por caso
 - Persistência em SQLite local, sem servidor
-- Mapa interativo com camadas claro/escuro
+- Mapa interativo com camadas claro/escuro, dividido em mapa + lista de ocorrências do período filtrado
+- Pinos do mapa e itens da lista coloridos por tipo de crime, com a mesma paleta usada nos gráficos
 - Clusterização de ocorrências
 - Heatmap contínuo de densidade espacial (vetorizado com NumPy)
 - Perfil de probabilidade de Rossmo (CGT — Criminal Geographic Targeting), com camada própria no mapa
@@ -158,17 +167,18 @@ Cada investigação/série de crimes é um **Caso** independente (`nome`, `descr
 - Zona de conforto
 - Base de operações estimada
 - Zona de segurança
-- Círculo de Canter (Circle Hypothesis) com raio de buffer ajustável pelo usuário
+- Círculo de Canter (Circle Hypothesis) com raio de buffer ajustável pelo usuário, incluindo diagrama esquemático com CGC, base estimada e os dois crimes que definem o círculo
 - Classificação geográfica Marauder/Commuter baseada no teste geométrico do Círculo de Canter
 - Classificação de ocorrências dentro/fora da zona de buffer
 - Relatório de inteligência geográfica em linguagem natural (página de Análise Automatizada), incluindo as premissas metodológicas do modelo de Rossmo
 - Importação em massa de ocorrências via CSV/XLSX, com mapeamento de colunas assistido
 - Geocodificação de endereço para latitude/longitude (Nominatim/OpenStreetMap) no cadastro manual
 - Exportação do mapa interativo (HTML) e de um relatório do caso (PDF) com resumo, zonas, relatório narrativo e lista de ocorrências
-- Comparação de métodos de decaimento (Rossmo, exponencial negativa, linear, normal/gaussiana) — mostra o quanto o pico de probabilidade estimado muda conforme a premissa metodológica escolhida
+- Comparação de métodos de decaimento (Rossmo, exponencial negativa, linear, normal/gaussiana) — mostra o quanto o pico de probabilidade estimado muda conforme a premissa metodológica escolhida, com barra de distância inline na tabela
 - Classificação de bairros em Zona de Conforto/Transição, com base na distância média ao CGC
 - Anotação de barreiras geográficas (rios, rodovias) por caso, editável e referenciada no relatório narrativo
-- Estatísticas por tipo de crime, bairro, dia, horário e linha do tempo
+- Estatísticas por tipo de crime (gráfico de rosca), bairro, dia, horário e linha do tempo
+- Sistema de design próprio: tokens de cor/tipografia/raio, ícones consistentes, badges de status coloridos, cards com acabamento em vidro (tema claro) ou glow (tema escuro)
 - Tema claro e tema escuro
 - Build Windows com PyInstaller
 
