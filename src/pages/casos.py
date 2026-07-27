@@ -46,8 +46,8 @@ from src.utils import normalize_column_names
 
 def main() -> None:
     """Render the case picker or the active case's workspace."""
-    theme = render_sidebar()
-    inject_global_styles(theme)
+    settings = render_sidebar()
+    inject_global_styles(settings)
     render_header()
 
     st.markdown("### Casos")
@@ -60,7 +60,7 @@ def main() -> None:
         render_case_list()
         render_new_case_form()
     else:
-        render_active_case(active_caso, theme)
+        render_active_case(active_caso)
 
 
 def render_case_list() -> None:
@@ -138,7 +138,7 @@ def render_new_case_form() -> None:
     st.rerun()
 
 
-def render_active_case(caso: Caso, theme: str) -> None:
+def render_active_case(caso: Caso) -> None:
     """Render the active case's header, registration form, and crime table."""
     render_case_header(caso)
 

@@ -13,6 +13,7 @@ from src.pages._shared import (
     load_case_crimes,
     render_case_header,
     render_date_range_filter,
+    render_metric_card,
     render_sidebar,
     require_active_case,
     style_chart,
@@ -23,8 +24,8 @@ _cached_build_statistical_dashboard = st.cache_data(show_spinner=False)(build_st
 
 
 def main() -> None:
-    theme = render_sidebar()
-    inject_global_styles(theme)
+    settings = render_sidebar()
+    inject_global_styles(settings)
 
     caso = require_active_case()
     render_case_header(caso)
@@ -33,16 +34,33 @@ def main() -> None:
     crimes = render_date_range_filter(caso, crimes)
     dashboard = _cached_build_statistical_dashboard(crimes)
 
-    render_statistical_dashboard(dashboard, crimes, theme)
+    render_statistical_dashboard(dashboard, crimes)
 
 
-def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.DataFrame, theme: str) -> None:
+def render_kpi_row(dashboard: StatisticalDashboard, crimes: pd.DataFrame) -> None:
+    """Render the top-of-page KPI row: total, top type, top district, period."""
+    top_tipo = dashboard.crime_type_frequency.iloc[0]["tipo_crime"] if not dashboard.crime_type_frequency.empty else "—"
+    top_bairro = dashboard.district_frequency.iloc[0]["bairro"] if not dashboard.district_frequency.empty else "—"
+    period = "—"
+    if not crimes.empty:
+        period = f"{crimes['data'].min():%d/%m/%Y} – {crimes['data'].max():%d/%m/%Y}"
+
+    kpi_cols = st.columns(4)
+    render_metric_card(kpi_cols[0], "list_alt", "Total de ocorrências", str(len(crimes)), "Registros no período")
+    render_metric_card(kpi_cols[1], "category", "Tipo mais frequente", str(top_tipo), "Categoria dominante")
+    render_metric_card(kpi_cols[2], "location_on", "Bairro mais frequente", str(top_bairro), "Concentração territorial")
+    render_metric_card(kpi_cols[3], "date_range", "Período", period, "Intervalo analisado")
+
+
+def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.DataFrame) -> None:
     """Render interactive statistical charts and frequency tables."""
     st.subheader("Dashboard estatístico")
 
     if dashboard.timeline.empty:
         st.warning("Cadastre crimes válidos para gerar estatísticas.")
         return
+
+    render_kpi_row(dashboard, crimes)
 
     ordered_types = ordered_crime_types(crimes)
     top_cols = st.columns(2)
@@ -58,7 +76,7 @@ def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.Dat
             labels={"tipo_crime": "Tipo de crime", "total": "Ocorrências"},
         )
         crime_type_chart.update_traces(textinfo="percent+label")
-        st.plotly_chart(style_chart(crime_type_chart, theme), width="stretch")
+        st.plotly_chart(style_chart(crime_type_chart), width="stretch")
 
     with top_cols[1]:
         district_chart = px.bar(
@@ -69,7 +87,7 @@ def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.Dat
             title="Frequência por bairro",
             labels={"bairro": "Bairro", "total": "Ocorrências"},
         )
-        st.plotly_chart(style_chart(district_chart, theme), width="stretch")
+        st.plotly_chart(style_chart(district_chart), width="stretch")
 
     middle_cols = st.columns(2)
     with middle_cols[0]:
@@ -81,7 +99,7 @@ def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.Dat
             title="Frequência por dia da semana",
             labels={"dia_semana": "Dia da semana", "total": "Ocorrências"},
         )
-        st.plotly_chart(style_chart(weekday_chart, theme), width="stretch")
+        st.plotly_chart(style_chart(weekday_chart), width="stretch")
 
     with middle_cols[1]:
         hour_chart = px.line(
@@ -93,7 +111,7 @@ def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.Dat
             labels={"hora": "Hora do dia", "total": "Ocorrências"},
         )
         hour_chart.update_xaxes(dtick=1)
-        st.plotly_chart(style_chart(hour_chart, theme), width="stretch")
+        st.plotly_chart(style_chart(hour_chart), width="stretch")
 
     timeline_chart = px.line(
         dashboard.timeline,
@@ -103,7 +121,7 @@ def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.Dat
         title="Linha do tempo dos crimes",
         labels={"data": "Data", "total": "Ocorrências"},
     )
-    st.plotly_chart(style_chart(timeline_chart, theme), width="stretch")
+    st.plotly_chart(style_chart(timeline_chart), width="stretch")
 
     table_cols = st.columns(2)
     with table_cols[0]:

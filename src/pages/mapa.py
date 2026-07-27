@@ -25,8 +25,8 @@ PANEL_HEIGHT = 560
 
 
 def main() -> None:
-    theme = render_sidebar()
-    inject_global_styles(theme)
+    settings = render_sidebar()
+    inject_global_styles(settings)
 
     caso = require_active_case()
     render_case_header(caso)

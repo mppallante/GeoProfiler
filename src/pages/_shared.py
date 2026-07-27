@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from dataclasses import dataclass
 from datetime import date
 from html import escape
 from pathlib import Path
@@ -16,19 +17,38 @@ from src.map_visualization import CRIME_TYPE_COLORWAY
 
 LOGO_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "logo.png"
 
+DENSITY_LABELS = ["Confortável", "Compacta"]
+DENSITY_KEYS = {"Confortável": "confortavel", "Compacta": "compacta"}
 
-def render_sidebar() -> str:
-    """Render the branded application sidebar and return the selected theme."""
+
+@dataclass(frozen=True)
+class UISettings:
+    """Interface preferences selected in the sidebar, threaded through every page."""
+
+    density: str  # "confortavel" | "compacta"
+    show_hypothesis: bool
+
+
+def render_sidebar() -> UISettings:
+    """Render the branded application sidebar and return the selected UI settings."""
     with st.sidebar:
         render_logo()
         st.markdown('<div class="gp-sidebar-title">GeoProfiler</div>', unsafe_allow_html=True)
         st.caption("Ferramenta de apoio ao perfilamento geográfico criminal.")
 
-        selected_theme = st.radio(
-            "Tema da interface",
-            options=["Escuro", "Claro"],
+        st.markdown('<div class="gp-sidebar-section-label">Aparência</div>', unsafe_allow_html=True)
+        selected_density = st.radio(
+            "Densidade",
+            options=DENSITY_LABELS,
             horizontal=True,
             index=0,
+        )
+
+        st.markdown('<div class="gp-sidebar-section-label">Análise</div>', unsafe_allow_html=True)
+        show_hypothesis = st.checkbox(
+            "Exibir hipótese e Círculo de Canter",
+            value=True,
+            help="Mostra o KPI de hipótese investigativa e o diagrama do Círculo de Canter na Análise Automatizada.",
         )
 
         active_caso_id = st.session_state.get("active_caso_id")
@@ -51,7 +71,10 @@ def render_sidebar() -> str:
         st.divider()
         st.caption("Os resultados são hipóteses investigativas, não conclusões periciais.")
 
-    return "light" if selected_theme == "Claro" else "dark"
+    return UISettings(
+        density=DENSITY_KEYS[selected_density],
+        show_hypothesis=show_hypothesis,
+    )
 
 
 def render_logo() -> None:
@@ -186,31 +209,38 @@ def render_date_range_filter(caso: Caso, crimes: pd.DataFrame) -> pd.DataFrame:
     return filtered
 
 
-def inject_global_styles(theme: str) -> None:
-    """Inject theme-aware investigative interface styles."""
-    palette = get_theme_palette(theme)
+DENSITY_TOKENS = {
+    "confortavel": {"outer": "36px", "card": "20px", "gap": "16px"},
+    "compacta": {"outer": "22px", "card": "14px", "gap": "10px"},
+}
 
-    if theme == "light":
-        zone_card_finish = """
-        .gp-zone-card, .gp-report-card {
-            background: color-mix(in srgb, var(--gp-surface) 78%, transparent);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            box-shadow: var(--gp-shadow);
-        }
-        """
-    else:
-        zone_card_finish = """
-        .gp-zone-card, .gp-report-card {
-            background: var(--gp-surface);
-            box-shadow: 0 0 0 1px var(--gp-border),
-                0 0 24px color-mix(in srgb, var(--gp-accent) 18%, transparent);
-        }
-        """
+
+def inject_global_styles(settings: UISettings) -> None:
+    """Inject the (light-only) glass investigative interface styles, density-aware."""
+    palette = get_theme_palette()
+    density = DENSITY_TOKENS[settings.density]
+
+    glass_finish = """
+    .gp-card, .gp-metric-card, .gp-zone-card, .gp-report-card,
+    [data-testid="stForm"], [data-testid="stDataFrame"] {
+        background: var(--gp-glass);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--gp-glass-border);
+        box-shadow: var(--gp-shadow-card);
+    }
+    [data-testid="stSidebar"], [data-testid="stMain"] > div {
+        background: var(--gp-glass-shell);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    """
 
     st.markdown(
         f"""
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
         :root {{
             --gp-bg: {palette["bg"]};
             --gp-bg-soft: {palette["bg_soft"]};
@@ -222,28 +252,97 @@ def inject_global_styles(theme: str) -> None:
             --gp-accent: {palette["accent"]};
             --gp-accent-2: {palette["accent_2"]};
             --gp-amber: {palette["amber"]};
-            --gp-shadow: {palette["shadow"]};
-            --gp-radius-s: 8px;
-            --gp-radius-m: 12px;
-            --gp-radius-l: 18px;
-            --gp-font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
-            --gp-font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+            --gp-shadow-card: {palette["shadow_card"]};
+            --gp-shadow-shell: {palette["shadow_shell"]};
+            --gp-glass: {palette["glass"]};
+            --gp-glass-border: {palette["glass_border"]};
+            --gp-glass-shell: {palette["glass_shell"]};
+            --gp-radius-chip: 12px;
+            --gp-radius-input: 14px;
+            --gp-radius-card: 20px;
+            --gp-radius-shell: 22px;
+            --gp-radius-pill: 999px;
+            --gp-pad-outer: {density["outer"]};
+            --gp-pad-card: {density["card"]};
+            --gp-gap: {density["gap"]};
+            --gp-font-sans: 'IBM Plex Sans', 'Source Sans Pro', sans-serif;
+            --gp-font-display: var(--gp-font-sans);
+            --gp-font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Roboto Mono', Menlo, Consolas, monospace;
         }}
 
         .stApp {{
             background: var(--gp-bg);
             color: var(--gp-text);
+            font-family: var(--gp-font-sans);
         }}
 
-        .block-container {{
-            padding-top: 1.25rem;
-            padding-bottom: 2.5rem;
+        [data-testid="stAppViewContainer"] {{
+            gap: 16px;
+        }}
+
+        .block-container, [data-testid="stMainBlockContainer"] {{
+            padding-top: var(--gp-pad-outer);
+            padding-bottom: var(--gp-pad-outer);
+            padding-left: var(--gp-pad-outer);
+            padding-right: var(--gp-pad-outer);
             max-width: 1480px;
         }}
 
+        [data-testid="stHorizontalBlock"] {{
+            gap: var(--gp-gap);
+        }}
+
         [data-testid="stSidebar"] {{
-            background: var(--gp-bg-soft);
-            border-right: 1px solid var(--gp-border);
+            border: 1px solid var(--gp-glass-border);
+            border-radius: var(--gp-radius-shell);
+            margin: 16px 0 16px 16px;
+            box-shadow: var(--gp-shadow-shell);
+            overflow: hidden;
+        }}
+
+        [data-testid="stSidebar"] > div {{
+            padding: 18px 14px;
+        }}
+
+        [data-testid="stMain"] {{
+            margin: 16px 16px 16px 0;
+        }}
+
+        [data-testid="stMain"] > div {{
+            border: 1px solid var(--gp-glass-border);
+            border-radius: var(--gp-radius-shell);
+            box-shadow: var(--gp-shadow-shell);
+        }}
+
+        [data-testid="stSidebarNav"] {{
+            padding: 4px 4px 8px 4px;
+        }}
+
+        [data-testid="stNavSectionHeader"] p {{
+            color: var(--gp-muted) !important;
+            font-size: 0.68rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }}
+
+        [data-testid="stSidebarNavLink"] {{
+            border-radius: var(--gp-radius-pill);
+            border: 1px solid transparent;
+            margin: 2px 8px;
+            color: var(--gp-text) !important;
+            font-weight: 500;
+            transition: background 0.15s;
+        }}
+
+        [data-testid="stSidebarNavLink"][aria-current="page"] {{
+            background: color-mix(in srgb, var(--gp-accent) 14%, transparent) !important;
+            border: 1px solid color-mix(in srgb, var(--gp-accent) 28%, transparent);
+        }}
+
+        [data-testid="stSidebarNavLink"][aria-current="page"] p {{
+            color: var(--gp-accent) !important;
+            font-weight: 700 !important;
         }}
 
         h1, h2, h3, h4, h5, h6, p, label, span {{
@@ -252,15 +351,25 @@ def inject_global_styles(theme: str) -> None:
 
         h1, h2, h3, h4, h5, h6 {{
             color: var(--gp-text);
+            font-family: var(--gp-font-sans);
+        }}
+
+        .gp-sidebar-section-label {{
+            color: var(--gp-muted);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: 14px 0 4px;
         }}
 
         .gp-logo-frame {{
             background: #ffffff;
             border: 1px solid #d6dde5;
-            border-radius: var(--gp-radius-m);
+            border-radius: var(--gp-radius-chip);
             padding: 12px;
             margin-bottom: 14px;
-            box-shadow: var(--gp-shadow);
+            box-shadow: var(--gp-shadow-card);
         }}
 
         .gp-logo-frame img {{
@@ -282,18 +391,18 @@ def inject_global_styles(theme: str) -> None:
             line-height: 1.5;
             padding: 12px;
             border: 1px solid var(--gp-border);
-            border-radius: var(--gp-radius-m);
+            border-radius: var(--gp-radius-chip);
             background: var(--gp-surface);
-            box-shadow: var(--gp-shadow);
+            box-shadow: var(--gp-shadow-card);
         }}
 
         .gp-header {{
             border: 1px solid var(--gp-border);
             background: linear-gradient(135deg, var(--gp-surface), var(--gp-surface-2));
-            border-radius: var(--gp-radius-l);
-            padding: 22px 24px;
+            border-radius: var(--gp-radius-card);
+            padding: var(--gp-pad-card) 24px;
             margin-bottom: 18px;
-            box-shadow: var(--gp-shadow);
+            box-shadow: var(--gp-shadow-card);
         }}
 
         .gp-header-kicker {{
@@ -310,7 +419,7 @@ def inject_global_styles(theme: str) -> None:
             font-family: var(--gp-font-display);
             font-size: 2.12rem;
             line-height: 1.1;
-            font-weight: 600;
+            font-weight: 700;
             margin: 0 0 8px 0;
         }}
 
@@ -323,12 +432,12 @@ def inject_global_styles(theme: str) -> None:
         .gp-card, .gp-metric-card, .gp-report-card, .gp-zone-card {{
             border: 1px solid var(--gp-border);
             background: var(--gp-surface);
-            border-radius: var(--gp-radius-l);
-            box-shadow: var(--gp-shadow);
+            border-radius: var(--gp-radius-card);
+            box-shadow: var(--gp-shadow-card);
         }}
 
         .gp-metric-card {{
-            padding: 16px;
+            padding: var(--gp-pad-card);
             min-height: 124px;
         }}
 
@@ -338,7 +447,7 @@ def inject_global_styles(theme: str) -> None:
             justify-content: center;
             width: 40px;
             height: 40px;
-            border-radius: var(--gp-radius-m);
+            border-radius: var(--gp-radius-chip);
             background: color-mix(in srgb, var(--gp-accent) 16%, transparent);
             color: var(--gp-accent);
             margin-bottom: 12px;
@@ -369,11 +478,11 @@ def inject_global_styles(theme: str) -> None:
         }}
 
         .gp-zone-card, .gp-report-card {{
-            padding: 16px;
+            padding: var(--gp-pad-card);
             margin-bottom: 14px;
         }}
 
-        {zone_card_finish}
+        {glass_finish}
 
         .gp-card-title {{
             color: var(--gp-text);
@@ -395,8 +504,8 @@ def inject_global_styles(theme: str) -> None:
             border: 1px solid var(--gp-border);
             background: var(--gp-surface-2);
             color: var(--gp-accent);
-            border-radius: var(--gp-radius-s);
-            padding: 4px 11px;
+            border-radius: var(--gp-radius-pill);
+            padding: 4px 12px;
             font-size: 0.78rem;
             font-weight: 800;
             margin-bottom: 8px;
@@ -429,9 +538,9 @@ def inject_global_styles(theme: str) -> None:
         [data-testid="stForm"] {{
             background: var(--gp-surface);
             border: 1px solid var(--gp-border);
-            border-radius: var(--gp-radius-m);
+            border-radius: var(--gp-radius-card);
             padding: 18px;
-            box-shadow: var(--gp-shadow);
+            box-shadow: var(--gp-shadow-card);
         }}
 
         [data-baseweb="input"],
@@ -443,6 +552,7 @@ def inject_global_styles(theme: str) -> None:
             background-color: var(--gp-surface-2) !important;
             color: var(--gp-text) !important;
             border-color: var(--gp-border) !important;
+            border-radius: var(--gp-radius-input) !important;
         }}
 
         [data-baseweb="radio"] div,
@@ -464,7 +574,7 @@ def inject_global_styles(theme: str) -> None:
         .stTabs [data-baseweb="tab"] {{
             background: var(--gp-surface);
             border: 1px solid var(--gp-border);
-            border-radius: var(--gp-radius-m) var(--gp-radius-m) 0 0;
+            border-radius: var(--gp-radius-chip) var(--gp-radius-chip) 0 0;
             color: var(--gp-muted);
             padding: 10px 14px;
             font-weight: 700;
@@ -476,16 +586,20 @@ def inject_global_styles(theme: str) -> None:
             border-color: var(--gp-accent);
         }}
 
-        .stButton > button {{
-            background: linear-gradient(135deg, var(--gp-accent), #14527a);
+        .stButton > button,
+        .stDownloadButton > button,
+        [data-testid="stFormSubmitButton"] button {{
+            background: linear-gradient(135deg, var(--gp-accent), color-mix(in srgb, var(--gp-accent) 70%, black));
             color: white;
             border: 1px solid var(--gp-accent);
-            border-radius: var(--gp-radius-m);
-            font-weight: 800;
-            box-shadow: var(--gp-shadow);
+            border-radius: var(--gp-radius-pill);
+            font-weight: 700;
+            box-shadow: var(--gp-shadow-card);
         }}
 
-        .stButton > button:hover {{
+        .stButton > button:hover,
+        .stDownloadButton > button:hover,
+        [data-testid="stFormSubmitButton"] button:hover {{
             color: white;
             filter: brightness(1.08);
         }}
@@ -493,12 +607,12 @@ def inject_global_styles(theme: str) -> None:
         [data-testid="stDataFrame"] {{
             background: var(--gp-surface);
             border: 1px solid var(--gp-border);
-            border-radius: var(--gp-radius-m);
-            box-shadow: var(--gp-shadow);
+            border-radius: var(--gp-radius-card);
+            box-shadow: var(--gp-shadow-card);
         }}
 
         .stAlert {{
-            border-radius: var(--gp-radius-s);
+            border-radius: var(--gp-radius-chip);
         }}
         </style>
         """,
@@ -506,35 +620,27 @@ def inject_global_styles(theme: str) -> None:
     )
 
 
-def get_theme_palette(theme: str) -> dict[str, str]:
-    """Return CSS palette values for the selected theme."""
-    if theme == "light":
-        return {
-            "bg": "#f6f3ec",
-            "bg_soft": "#efeade",
-            "surface": "#ffffff",
-            "surface_2": "#f4efe3",
-            "border": "rgba(40, 35, 28, 0.14)",
-            "text": "#1c2128",
-            "muted": "#5b6570",
-            "accent": "#0b5ed7",
-            "accent_2": "#b4232a",
-            "amber": "#b9812f",
-            "shadow": "0 12px 28px rgba(40, 35, 28, 0.08)",
-        }
-
+def get_theme_palette() -> dict[str, str]:
+    """Return the fixed light-theme, Forense-accent CSS palette values."""
     return {
-        "bg": "#070b10",
-        "bg_soft": "#07101a",
-        "surface": "#0d141d",
-        "surface_2": "#111c28",
-        "border": "rgba(116, 178, 214, 0.18)",
-        "text": "#e8f2f7",
-        "muted": "#8ea6b5",
-        "accent": "#4db6e8",
-        "accent_2": "#e2565b",
-        "amber": "#d99a3d",
-        "shadow": "0 18px 48px rgba(0, 0, 0, 0.28)",
+        "bg": (
+            "linear-gradient(135deg, oklch(93% 0.035 300) 0%, "
+            "oklch(91% 0.04 350) 45%, oklch(93% 0.03 250) 100%)"
+        ),
+        "bg_soft": "oklch(91% 0.03 320)",
+        "surface": "#ffffff",
+        "surface_2": "oklch(96% 0.01 280)",
+        "border": "oklch(40% 0.015 250 / 0.12)",
+        "text": "oklch(20% 0.015 250)",
+        "muted": "oklch(50% 0.015 250)",
+        "accent": "oklch(55% 0.17 250)",
+        "accent_2": "oklch(58% 0.19 25)",
+        "amber": "#b9812f",
+        "shadow_card": "0 4px 18px oklch(40% 0.05 280 / 0.08)",
+        "shadow_shell": "0 8px 32px oklch(40% 0.05 280 / 0.12)",
+        "glass": "oklch(100% 0 0 / 0.55)",
+        "glass_border": "oklch(100% 0 0 / 0.7)",
+        "glass_shell": "oklch(100% 0 0 / 0.5)",
     }
 
 
@@ -584,34 +690,21 @@ def render_metric_card(column, icon: str, label: str, value: str, caption: str) 
         )
 
 
-def style_chart(figure, theme: str):
-    """Apply consistent styling to Plotly figures."""
-    if theme == "light":
-        template = "plotly_white"
-        paper = "rgba(255,255,255,0)"
-        plot = "rgba(255,255,255,0.92)"
-        font = "#17212b"
-        grid = "rgba(23, 60, 86, 0.13)"
-    else:
-        template = "plotly_dark"
-        paper = "rgba(13, 20, 29, 0)"
-        plot = "rgba(13, 20, 29, 0.72)"
-        font = "#e8f2f7"
-        grid = "rgba(142, 166, 181, 0.16)"
-
+def style_chart(figure):
+    """Apply consistent (light-theme) styling to Plotly figures."""
     figure.update_layout(
-        template=template,
-        paper_bgcolor=paper,
-        plot_bgcolor=plot,
-        font=dict(color=font),
+        template="plotly_white",
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="rgba(255,255,255,0.92)",
+        font=dict(color="#17212b"),
         margin=dict(l=20, r=20, t=60, b=24),
         hovermode="x unified",
         title_font_size=18,
-        title_font_color=font,
+        title_font_color="#17212b",
         colorway=CRIME_TYPE_COLORWAY,
     )
-    figure.update_xaxes(gridcolor=grid, zerolinecolor=grid)
-    figure.update_yaxes(gridcolor=grid, zerolinecolor=grid)
+    figure.update_xaxes(gridcolor="rgba(23, 60, 86, 0.13)", zerolinecolor="rgba(23, 60, 86, 0.13)")
+    figure.update_yaxes(gridcolor="rgba(23, 60, 86, 0.13)", zerolinecolor="rgba(23, 60, 86, 0.13)")
     figure.update_traces(textposition="outside", marker_cornerradius=8, selector=dict(type="bar"))
     return figure
 

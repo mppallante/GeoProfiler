@@ -41,8 +41,8 @@ _cached_run_geographic_analysis = st.cache_data(show_spinner=False)(run_geograph
 
 
 def main() -> None:
-    theme = render_sidebar()
-    inject_global_styles(theme)
+    settings = render_sidebar()
+    inject_global_styles(settings)
 
     caso = require_active_case()
     render_case_header(caso)
@@ -63,11 +63,13 @@ def main() -> None:
         crimes, buffer_km=buffer_km, barreiras_geograficas=caso.barreiras_geograficas
     )
 
-    render_geographic_profiling_panel(analysis, theme)
+    render_geographic_profiling_panel(analysis, settings.show_hypothesis)
     render_export_section(caso, crimes, analysis)
 
 
-def render_geographic_profiling_panel(analysis: GeographicAnalysis, theme: str) -> None:
+def render_geographic_profiling_panel(
+    analysis: GeographicAnalysis, show_hypothesis: bool
+) -> None:
     """Render the geographic profiling intelligence panel."""
     st.subheader("PAINEL DE PERFILAMENTO GEOGRÁFICO")
 
@@ -76,7 +78,7 @@ def render_geographic_profiling_panel(analysis: GeographicAnalysis, theme: str) 
         return
 
     metrics = analysis.distance_metrics
-    metric_cols = st.columns(4)
+    metric_cols = st.columns(4 if show_hypothesis else 3)
     render_metric_card(
         metric_cols[0],
         "target",
@@ -86,22 +88,23 @@ def render_geographic_profiling_panel(analysis: GeographicAnalysis, theme: str) 
     )
     render_metric_card(metric_cols[1], "straighten", "Distância média", f"{metrics.average_distance_km:.2f} km", "Raio operacional médio")
     render_metric_card(metric_cols[2], "scatter_plot", "Desvio espacial", f"{metrics.spatial_std_km:.2f} km", "Dispersão territorial")
-    render_metric_card(metric_cols[3], "insights", "Hipótese", analysis.offender_classification.category, f"{analysis.offender_classification.confidence:.1f}% de confiança")
+    if show_hypothesis:
+        render_metric_card(metric_cols[3], "insights", "Hipótese", analysis.offender_classification.category, f"{analysis.offender_classification.confidence:.1f}% de confiança")
 
     zone_cols = st.columns(3)
-    render_zone_card(zone_cols[0], analysis.comfort_zone)
-    render_zone_card(zone_cols[1], analysis.operations_base)
-    render_zone_card(zone_cols[2], analysis.security_zone)
+    render_zone_card(zone_cols[0], analysis.comfort_zone, "accent")
+    render_zone_card(zone_cols[1], analysis.operations_base, "alert")
+    render_zone_card(zone_cols[2], analysis.security_zone, "neutral")
 
-    st.markdown("#### Círculo de Canter")
-    render_canter_circle_card(analysis.canter_circle, analysis.offender_classification)
-    render_canter_circle_diagram(
-        analysis.canter_circle,
-        analysis.center,
-        analysis.operations_base,
-        analysis.crimes_with_distances,
-        theme,
-    )
+    if show_hypothesis:
+        st.markdown("#### Círculo de Canter")
+        render_canter_circle_card(analysis.canter_circle, analysis.offender_classification)
+        render_canter_circle_diagram(
+            analysis.canter_circle,
+            analysis.center,
+            analysis.operations_base,
+            analysis.crimes_with_distances,
+        )
 
     st.markdown("#### Relatório de inteligência geográfica")
     for title, text in analysis.interpretation.items():
@@ -151,7 +154,7 @@ def render_geographic_profiling_panel(analysis: GeographicAnalysis, theme: str) 
             text="Total de crimes",
             title="Concentração por célula crítica",
         )
-        st.plotly_chart(style_chart(critical_cells_chart, theme), width="stretch")
+        st.plotly_chart(style_chart(critical_cells_chart), width="stretch")
 
     distance_table = format_distance_table(analysis.crimes_with_distances)
     st.markdown("#### Distância de cada crime até o CGC")
@@ -164,7 +167,7 @@ def render_geographic_profiling_panel(analysis: GeographicAnalysis, theme: str) 
             markers=True,
             title="Distância ao Centro de Gravidade Criminal por ocorrência",
         )
-        st.plotly_chart(style_chart(distance_chart, theme), width="stretch")
+        st.plotly_chart(style_chart(distance_chart), width="stretch")
 
     neighborhood_zones = format_neighborhood_zones_table(analysis.neighborhood_zones)
     st.markdown("#### Classificação de bairros")
@@ -175,7 +178,7 @@ def render_geographic_profiling_panel(analysis: GeographicAnalysis, theme: str) 
     st.dataframe(neighborhood_zones, width="stretch", hide_index=True)
 
 
-def render_zone_card(column, zone: ProfileZone) -> None:
+def render_zone_card(column, zone: ProfileZone, badge_variant: str = "accent") -> None:
     """Render a geographic profiling zone card."""
     center = "Indisponível"
     if zone.center is not None:
@@ -185,7 +188,7 @@ def render_zone_card(column, zone: ProfileZone) -> None:
         st.markdown(
             f"""
             <div class="gp-zone-card">
-                {render_badge(zone.title, "accent")}
+                {render_badge(zone.title, badge_variant)}
                 <div class="gp-card-title">Raio estimado: {zone.radius_km:.2f} km</div>
                 <div class="gp-card-body">
                     <strong>Coordenadas:</strong> {escape(center)}<br><br>
@@ -238,7 +241,6 @@ def render_canter_circle_diagram(
     center: Coordinate | None,
     operations_base: ProfileZone,
     crimes_with_distances: pd.DataFrame,
-    theme: str,
 ) -> None:
     """Render a schematic diagram of the Canter Circle with labeled callouts.
 
@@ -321,7 +323,7 @@ def render_canter_circle_diagram(
         margin=dict(l=10, r=10, t=50, b=10),
     )
 
-    st.plotly_chart(style_chart(figure, theme), width="stretch")
+    st.plotly_chart(style_chart(figure), width="stretch")
 
 
 def render_export_section(caso: Caso, crimes: pd.DataFrame, analysis: GeographicAnalysis) -> None:

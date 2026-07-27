@@ -11,9 +11,25 @@ import time
 import webbrowser
 from pathlib import Path
 
+# Imported eagerly, at module load time (before any thread exists), so that
+# the main thread's later `import streamlit...` calls in run_streamlit() and
+# the watchdog thread's own import below both hit an already-fully-loaded
+# module instead of racing to import the streamlit package for the first
+# time concurrently. Two threads doing that at once triggers a genuine
+# CPython import-lock deadlock (reproduced empirically: `_DeadlockError` from
+# `_ModuleLock('streamlit.config')` when the watchdog thread's import ran
+# concurrently with run_streamlit()'s).
+from streamlit.runtime.runtime import Runtime, RuntimeState  # noqa: E402
+
 
 APP_FILE = "app.py"
 DEFAULT_PORT = 8501
+
+# How often to check whether the browser is still connected, and how long to
+# wait after the last tab disconnects before treating that as "the user
+# closed the app" (long enough to survive a manual page refresh).
+CONNECTION_POLL_INTERVAL_SECONDS = 2
+IDLE_SHUTDOWN_GRACE_SECONDS = 10
 
 
 def main() -> None:
@@ -32,6 +48,7 @@ def main() -> None:
         args=("127.0.0.1", port, url),
         daemon=True,
     ).start()
+    threading.Thread(target=shutdown_when_browser_closes, daemon=True).start()
 
     run_streamlit(app_path, port)
 
@@ -123,6 +140,46 @@ def open_browser_when_ready(host: str, port: int, url: str) -> None:
         if os.environ.get("GEOPROFILER_NO_BROWSER") == "1":
             return
         webbrowser.open_new(url)
+
+
+def shutdown_when_browser_closes() -> None:
+    """Exit the process once the browser window has been closed.
+
+    Streamlit's server has no built-in concept of "the browser was closed":
+    closing the tab just drops the websocket connection, and the headless
+    `--noconsole` process otherwise keeps running invisibly in the
+    background forever. Streamlit's own Runtime does track connected
+    sessions internally (that's how it decides whether to keep a session's
+    state alive across a page refresh), so this polls that state to detect
+    "last session disconnected" reliably.
+
+    Detection is solid, but a graceful `Runtime.stop()` is not enough to
+    actually end the process: it stops Streamlit's internal session loop
+    (confirmed empirically - the Runtime's state does reach `STOPPED` within
+    a second), but the underlying Uvicorn/ASGI server that owns the listening
+    socket keeps running regardless, so the process lingers forever. Once the
+    disconnect grace period elapses, this hard-exits the process directly
+    instead. That's safe here: every case/crime write already commits to
+    SQLite synchronously within its own Streamlit script run, well before the
+    browser could be closed, so there's no in-flight state to flush on exit.
+    """
+    while not Runtime.exists():
+        time.sleep(CONNECTION_POLL_INTERVAL_SECONDS)
+
+    runtime = Runtime.instance()
+
+    while runtime.state != RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED:
+        time.sleep(CONNECTION_POLL_INTERVAL_SECONDS)
+
+    disconnected_since: float | None = None
+    while True:
+        time.sleep(CONNECTION_POLL_INTERVAL_SECONDS)
+        if runtime.state == RuntimeState.NO_SESSIONS_CONNECTED:
+            disconnected_since = disconnected_since or time.time()
+            if time.time() - disconnected_since >= IDLE_SHUTDOWN_GRACE_SECONDS:
+                os._exit(0)
+        else:
+            disconnected_since = None
 
 
 if __name__ == "__main__":
