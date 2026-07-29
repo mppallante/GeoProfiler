@@ -6,15 +6,17 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src.map_visualization import crime_type_color, ordered_crime_types
 from src.pages._shared import (
     format_frequency_table,
     inject_global_styles,
     load_case_crimes,
     render_case_header,
+    render_chart_card,
     render_date_range_filter,
+    render_horizontal_bar_chart,
     render_metric_card,
     render_sidebar,
+    render_vertical_bar_chart,
     require_active_case,
     style_chart,
 )
@@ -62,56 +64,42 @@ def render_statistical_dashboard(dashboard: StatisticalDashboard, crimes: pd.Dat
 
     render_kpi_row(dashboard, crimes)
 
-    ordered_types = ordered_crime_types(crimes)
     top_cols = st.columns(2)
-    with top_cols[0]:
-        crime_type_chart = px.pie(
-            dashboard.crime_type_frequency,
-            values="total",
-            names="tipo_crime",
-            hole=0.55,
-            title="Frequência por tipo de crime",
-            color="tipo_crime",
-            color_discrete_map={t: crime_type_color(t, ordered_types) for t in ordered_types},
-            labels={"tipo_crime": "Tipo de crime", "total": "Ocorrências"},
-        )
-        crime_type_chart.update_traces(textinfo="percent+label")
-        st.plotly_chart(style_chart(crime_type_chart), width="stretch")
+    tipo_items = [
+        (row["tipo_crime"], int(row["total"]), float(row["percentual"]))
+        for _, row in dashboard.crime_type_frequency.iterrows()
+    ]
+    render_chart_card(
+        top_cols[0],
+        "Frequência por tipo de crime",
+        render_horizontal_bar_chart(tipo_items, color="var(--gp-accent)"),
+    )
 
-    with top_cols[1]:
-        district_chart = px.bar(
-            dashboard.district_frequency,
-            x="bairro",
-            y="total",
-            text="total",
-            title="Frequência por bairro",
-            labels={"bairro": "Bairro", "total": "Ocorrências"},
-        )
-        st.plotly_chart(style_chart(district_chart), width="stretch")
+    bairro_items = [
+        (row["bairro"], int(row["total"])) for _, row in dashboard.district_frequency.iterrows()
+    ]
+    render_chart_card(
+        top_cols[1],
+        "Frequência por bairro",
+        render_vertical_bar_chart(bairro_items, color="var(--gp-accent)"),
+    )
 
     middle_cols = st.columns(2)
-    with middle_cols[0]:
-        weekday_chart = px.bar(
-            dashboard.weekday_frequency,
-            x="dia_semana",
-            y="total",
-            text="total",
-            title="Frequência por dia da semana",
-            labels={"dia_semana": "Dia da semana", "total": "Ocorrências"},
-        )
-        st.plotly_chart(style_chart(weekday_chart), width="stretch")
+    weekday_items = [
+        (row["dia_semana"], int(row["total"])) for _, row in dashboard.weekday_frequency.iterrows()
+    ]
+    render_chart_card(
+        middle_cols[0],
+        "Frequência por dia da semana",
+        render_vertical_bar_chart(weekday_items, color="var(--gp-accent)", bar_width="22px"),
+    )
 
-    with middle_cols[1]:
-        hour_chart = px.line(
-            dashboard.hour_frequency,
-            x="hora",
-            y="total",
-            markers=True,
-            title="Frequência por horário",
-            labels={"hora": "Hora do dia", "total": "Ocorrências"},
-        )
-        hour_chart.update_xaxes(dtick=1)
-        st.plotly_chart(style_chart(hour_chart), width="stretch")
+    hour_items = [(int(row["hora"]), int(row["total"])) for _, row in dashboard.hour_frequency.iterrows()]
+    render_chart_card(
+        middle_cols[1],
+        "Frequência por horário",
+        render_vertical_bar_chart(hour_items, color="var(--gp-accent-2)", thin=True),
+    )
 
     timeline_chart = px.line(
         dashboard.timeline,

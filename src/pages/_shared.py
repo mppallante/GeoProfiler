@@ -13,7 +13,6 @@ import streamlit as st
 
 from src.data_manager import Caso, get_caso, read_case_crimes
 from src.db import DB_PATH
-from src.map_visualization import CRIME_TYPE_COLORWAY
 
 LOGO_PATH = Path(__file__).resolve().parent.parent.parent / "assets" / "logo.png"
 
@@ -117,7 +116,7 @@ def render_case_header(caso: Caso) -> None:
         f"""
         <section class="gp-header">
             <div class="gp-header-kicker">Caso ativo</div>
-            <h2 class="gp-header-title" style="font-size:1.6rem;">{escape(caso.nome)}</h2>
+            <h2 class="gp-header-title" style="font-size:28px;">{escape(caso.nome)}</h2>
             <p class="gp-header-subtitle">{description}</p>
         </section>
         """,
@@ -293,11 +292,18 @@ def inject_global_styles(settings: UISettings) -> None:
         }}
 
         [data-testid="stSidebar"] {{
+            width: 272px !important;
+            min-width: 272px !important;
+            max-width: 272px !important;
             border: 1px solid var(--gp-glass-border);
             border-radius: var(--gp-radius-shell);
             margin: 16px 0 16px 16px;
             box-shadow: var(--gp-shadow-shell);
             overflow: hidden;
+        }}
+
+        [data-testid="stSidebarResizeHandle"] {{
+            display: none;
         }}
 
         [data-testid="stSidebar"] > div {{
@@ -320,8 +326,8 @@ def inject_global_styles(settings: UISettings) -> None:
 
         [data-testid="stNavSectionHeader"] p {{
             color: var(--gp-muted) !important;
-            font-size: 0.68rem !important;
-            font-weight: 700 !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
             letter-spacing: 0.08em;
             text-transform: uppercase;
         }}
@@ -356,8 +362,8 @@ def inject_global_styles(settings: UISettings) -> None:
 
         .gp-sidebar-section-label {{
             color: var(--gp-muted);
-            font-size: 0.68rem;
-            font-weight: 700;
+            font-size: 11px;
+            font-weight: 600;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             margin: 14px 0 4px;
@@ -380,14 +386,14 @@ def inject_global_styles(settings: UISettings) -> None:
 
         .gp-sidebar-title {{
             color: var(--gp-text);
-            font-size: 1.18rem;
-            font-weight: 800;
+            font-size: 16px;
+            font-weight: 700;
             margin: 8px 0 4px;
         }}
 
         .gp-sidebar-meta {{
             color: var(--gp-muted);
-            font-size: 0.88rem;
+            font-size: 14px;
             line-height: 1.5;
             padding: 12px;
             border: 1px solid var(--gp-border);
@@ -407,9 +413,9 @@ def inject_global_styles(settings: UISettings) -> None:
 
         .gp-header-kicker {{
             color: var(--gp-accent);
-            font-size: 0.76rem;
-            font-weight: 800;
-            letter-spacing: 0.12em;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
             margin-bottom: 8px;
         }}
@@ -417,15 +423,15 @@ def inject_global_styles(settings: UISettings) -> None:
         .gp-header .gp-header-title {{
             color: var(--gp-text);
             font-family: var(--gp-font-display);
-            font-size: 2.12rem;
-            line-height: 1.1;
+            font-size: 30px;
+            line-height: 1.15;
             font-weight: 700;
             margin: 0 0 8px 0;
         }}
 
         .gp-header-subtitle {{
             color: var(--gp-muted);
-            font-size: 1rem;
+            font-size: 15px;
             margin: 0;
         }}
 
@@ -434,6 +440,10 @@ def inject_global_styles(settings: UISettings) -> None:
             background: var(--gp-surface);
             border-radius: var(--gp-radius-card);
             box-shadow: var(--gp-shadow-card);
+        }}
+
+        .gp-card {{
+            padding: var(--gp-pad-card);
         }}
 
         .gp-metric-card {{
@@ -455,9 +465,9 @@ def inject_global_styles(settings: UISettings) -> None:
 
         .gp-metric-label {{
             color: var(--gp-muted);
-            font-size: 0.75rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
             margin-bottom: 10px;
         }}
@@ -465,7 +475,7 @@ def inject_global_styles(settings: UISettings) -> None:
         .gp-metric-value {{
             color: var(--gp-text);
             font-family: var(--gp-font-mono);
-            font-size: 1.5rem;
+            font-size: 21px;
             font-weight: 700;
             line-height: 1.15;
             overflow-wrap: anywhere;
@@ -473,7 +483,7 @@ def inject_global_styles(settings: UISettings) -> None:
 
         .gp-metric-caption {{
             color: var(--gp-accent);
-            font-size: 0.82rem;
+            font-size: 13px;
             margin-top: 8px;
         }}
 
@@ -486,14 +496,14 @@ def inject_global_styles(settings: UISettings) -> None:
 
         .gp-card-title {{
             color: var(--gp-text);
-            font-weight: 820;
-            font-size: 1.02rem;
+            font-weight: 600;
+            font-size: 16px;
             margin-bottom: 8px;
         }}
 
         .gp-card-body {{
             color: var(--gp-muted);
-            font-size: 0.93rem;
+            font-size: 14px;
             line-height: 1.55;
         }}
 
@@ -506,8 +516,8 @@ def inject_global_styles(settings: UISettings) -> None:
             color: var(--gp-accent);
             border-radius: var(--gp-radius-pill);
             padding: 4px 12px;
-            font-size: 0.78rem;
-            font-weight: 800;
+            font-size: 12px;
+            font-weight: 600;
             margin-bottom: 8px;
         }}
 
@@ -624,8 +634,8 @@ def get_theme_palette() -> dict[str, str]:
     """Return the fixed light-theme, Forense-accent CSS palette values."""
     return {
         "bg": (
-            "linear-gradient(135deg, oklch(93% 0.035 300) 0%, "
-            "oklch(91% 0.04 350) 45%, oklch(93% 0.03 250) 100%)"
+            "linear-gradient(135deg, oklch(94% 0.025 240) 0%, "
+            "oklch(92% 0.035 255) 50%, oklch(94% 0.02 220) 100%)"
         ),
         "bg_soft": "oklch(91% 0.03 320)",
         "surface": "#ffffff",
@@ -690,23 +700,139 @@ def render_metric_card(column, icon: str, label: str, value: str, caption: str) 
         )
 
 
+# Plotly validates color properties against hex/rgb/hsl/named-CSS strings
+# only (its Python layer rejects `oklch()` outright, confirmed empirically:
+# "ValueError: Invalid value ... received for the 'color' property"), unlike
+# the browser-rendered CSS injected elsewhere in this module. These are the
+# precise sRGB conversions of the guide's OKLCH tokens (text, grid,
+# primary/secondary accent), computed directly from the OKLab formulas so
+# they match the CSS tokens exactly rather than an eyeballed hex.
+CHART_GRID_COLOR = "rgba(218, 222, 227, 0.5)"  # oklch(90% 0.008 250 / 0.5)
+CHART_TEXT_COLOR = "#11171d"  # oklch(20% 0.015 250)
+CHART_PRIMARY_COLOR = "#0073cf"  # oklch(55% 0.17 250)
+CHART_SECONDARY_COLOR = "#d33a3c"  # oklch(58% 0.19 25)
+
+
 def style_chart(figure):
-    """Apply consistent (light-theme) styling to Plotly figures."""
+    """Apply design-system-compliant styling to a Plotly figure.
+
+    Restricted to the palette's two accents (never a rainbow colorway),
+    IBM Plex Sans for titles/labels and IBM Plex Mono for tick numbers, and a
+    single subtle gridline instead of the library's default grid.
+    """
     figure.update_layout(
         template="plotly_white",
         paper_bgcolor="rgba(255,255,255,0)",
-        plot_bgcolor="rgba(255,255,255,0.92)",
-        font=dict(color="#17212b"),
-        margin=dict(l=20, r=20, t=60, b=24),
+        plot_bgcolor="rgba(255,255,255,0)",
+        font=dict(family="'IBM Plex Sans', sans-serif", color=CHART_TEXT_COLOR, size=13),
+        margin=dict(l=20, r=20, t=50, b=24),
         hovermode="x unified",
-        title_font_size=18,
-        title_font_color="#17212b",
-        colorway=CRIME_TYPE_COLORWAY,
+        title_font_size=16,
+        title_font_family="'IBM Plex Sans', sans-serif",
+        title_font_color=CHART_TEXT_COLOR,
+        colorway=[CHART_PRIMARY_COLOR, CHART_SECONDARY_COLOR],
+        showlegend=False,
     )
-    figure.update_xaxes(gridcolor="rgba(23, 60, 86, 0.13)", zerolinecolor="rgba(23, 60, 86, 0.13)")
-    figure.update_yaxes(gridcolor="rgba(23, 60, 86, 0.13)", zerolinecolor="rgba(23, 60, 86, 0.13)")
-    figure.update_traces(textposition="outside", marker_cornerradius=8, selector=dict(type="bar"))
+    figure.update_xaxes(
+        gridcolor=CHART_GRID_COLOR,
+        zerolinecolor=CHART_GRID_COLOR,
+        showline=False,
+        tickfont=dict(family="'IBM Plex Mono', monospace", size=11),
+    )
+    figure.update_yaxes(
+        gridcolor=CHART_GRID_COLOR,
+        zerolinecolor=CHART_GRID_COLOR,
+        showline=False,
+        tickfont=dict(family="'IBM Plex Mono', monospace", size=11),
+    )
+    figure.update_traces(textposition="outside", marker_cornerradius=3, selector=dict(type="bar"))
     return figure
+
+
+def render_chart_card(column, title: str, body_html: str) -> None:
+    """Render a glass card containing a title and pre-built chart HTML body.
+
+    The whole markup is emitted as a single line. Streamlit's markdown
+    renderer treats a run of consecutive HTML lines as a raw HTML block only
+    until the first blank (or whitespace-only) line, after which it falls
+    back to normal Markdown block parsing — where a 4+-space-indented line
+    is read as an indented code block. Multi-line, indented triple-quoted
+    f-string snippets joined in a loop reliably produce such whitespace-only
+    lines between items (confirmed empirically: the district/weekday bar
+    charts rendered as literal preformatted text before this was flattened),
+    so every HTML-returning helper here builds single-line strings instead.
+    """
+    with column:
+        st.markdown(
+            f'<div class="gp-card"><div class="gp-card-title">{escape(title)}</div>{body_html}</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def render_horizontal_bar_chart(items: list[tuple[str, int, float]], color: str = "var(--gp-accent)") -> str:
+    """Return HTML for a stack of labeled proportion bars (e.g. crime type frequency).
+
+    `items` is a list of (label, count, percent) rows, already sorted as desired.
+    """
+    rows = []
+    for label, count, percent in items:
+        rows.append(
+            f'<div style="margin-top:14px;">'
+            f'<div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">'
+            f'<span style="font-weight:600; color:var(--gp-text);">{escape(str(label))}</span>'
+            f'<span style="font-family:var(--gp-font-mono); color:var(--gp-muted); font-size:12px;">'
+            f'{count} &middot; {percent:.0f}%</span>'
+            f"</div>"
+            f'<div style="background:var(--gp-surface-2); border-radius:3px; height:10px; overflow:hidden;">'
+            f'<div style="height:100%; width:{percent:.2f}%; background:{color}; border-radius:3px;"></div>'
+            f"</div></div>"
+        )
+    return "".join(rows) if rows else '<p style="color:var(--gp-muted); font-size:14px;">Sem dados.</p>'
+
+
+def render_vertical_bar_chart(
+    items: list[tuple[str, int]],
+    color: str,
+    bar_width: str = "28px",
+    height: str = "140px",
+    thin: bool = False,
+) -> str:
+    """Return HTML for a simple vertical bar chart (e.g. frequency by district/weekday/hour).
+
+    `items` is a list of (label, count) pairs. When `thin` is set, bars are
+    drawn edge-to-edge with no count/label captions (24-hour style chart);
+    bars for a zero count render in a neutral tone instead of the accent.
+    """
+    if not items:
+        return '<p style="color:var(--gp-muted); font-size:14px;">Sem dados.</p>'
+
+    max_count = max((count for _, count in items), default=0) or 1
+    bars = []
+    for label, count in items:
+        pct = max((count / max_count) * 100, 3 if count else 1.5)
+        if thin:
+            bar_color = color if count else "var(--gp-surface-2)"
+            bars.append(
+                f'<div style="flex:1; height:{pct:.1f}%; background:{bar_color}; '
+                f'border-radius:2px 2px 0 0;" title="{escape(str(label))}: {count}"></div>'
+            )
+        else:
+            bars.append(
+                f'<div style="flex:1; display:flex; flex-direction:column; align-items:center; '
+                f'justify-content:flex-end; height:100%;">'
+                f'<div style="font-family:var(--gp-font-mono); font-size:11px; color:var(--gp-text); margin-bottom:4px;">'
+                f"{count}</div>"
+                f'<div style="width:{bar_width}; height:{pct:.1f}%; background:{color}; '
+                f'border-radius:3px 3px 0 0;"></div>'
+                f'<div style="font-size:11px; color:var(--gp-muted); margin-top:6px; text-align:center;">'
+                f"{escape(str(label))}</div></div>"
+            )
+
+    gap = "3px" if thin else "12px"
+    return (
+        f'<div style="display:flex; align-items:flex-end; gap:{gap}; height:{height}; margin-top:16px;">'
+        f'{"".join(bars)}</div>'
+    )
 
 
 def format_crime_table(crimes: pd.DataFrame) -> pd.DataFrame:
